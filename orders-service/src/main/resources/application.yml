@@ -1,0 +1,30 @@
+server:
+  port: 8083
+  address: 0.0.0.0 
+
+spring:
+  datasource:
+    url: jdbc:postgresql://orders-postgres:5432/orders_db
+    username: orders_user
+    password: 123456
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+
+#logging:
+#  level:
+#    org.hibernate.SQL: DEBUG
+
+services:
+  warehouse:
+    url: http://warehouse-service:8082
+  users:
+    url: http://users-service:8081

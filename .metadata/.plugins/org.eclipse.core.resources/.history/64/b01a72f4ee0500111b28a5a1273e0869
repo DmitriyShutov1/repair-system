@@ -1,0 +1,122 @@
+package com.system.users.security;
+
+import com.system.users.entity.RefreshToken;
+import com.system.users.entity.UserAccount;
+import com.system.users.repository.RefreshTokenRepository;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import java.nio.charset.StandardCharsets;
+import java.security.Key;
+import java.time.Instant;
+import java.util.Date;
+import java.util.UUID;
+import java.util.Optional;
+
+@Component
+public class JwtService {
+
+    private final Key hmacKey;
+    private final long accessTokenTtlSeconds;
+    private final long refreshTokenTtlSeconds;
+    private final RefreshTokenRepository refreshTokenRepository;
+
+    public JwtService(
+            @Value("${jwt.secret}") String secret,
+            @Value("${jwt.access-token-ttl:900}") long accessTokenTtlSeconds,
+            @Value("${jwt.refresh-token-ttl:2592000}") long refreshTokenTtlSeconds,
+            RefreshTokenRepository refreshTokenRepository) {
+        this.hmacKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.accessTokenTtlSeconds = accessTokenTtlSeconds;
+        this.refreshTokenTtlSeconds = refreshTokenTtlSeconds;
+        this.refreshTokenRepository = refreshTokenRepository;
+    }
+
+    /**
+     * Генерирует JWT access token (signed HS256).
+     */
+    public String generateAccessToken(UserAccount user) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(accessTokenTtlSeconds);
+
+        JwtBuilder b = Jwts.builder()
+                .setSubject(user.getId().toString())
+                .setIssuedAt(Date.from(now))
+                .setExpiration(Date.from(exp))
+                .claim("role", user.getRole().name());
+
+        if (user.getBranch() != null && user.getBranch().getId() != null) {
+            b.claim("branchId", user.getBranch().getId());
+        }
+
+        return b.signWith(hmacKey, SignatureAlgorithm.HS256).compact();
+    }
+
+    /**
+     * Создаёт refresh token (opaque token), сохраняет в БД в виде хеша и возвращает чистый token клиенту.
+     * Хеширование реализовано через SHA-256.
+     */
+    public String createRefreshToken(UserAccount user) {
+        String token = UUID.randomUUID().toString() + "." + UUID.randomUUID().toString(); // длиннее, случайнее
+        String tokenHash = sha256Hex(token);
+
+        Instant now = Instant.now();
+        Instant expiresAt = now.plusSeconds(refreshTokenTtlSeconds);
+
+        RefreshToken entity = RefreshToken.builder()
+                .tokenHash(tokenHash)
+                .user(user)
+                .expiresAt(expiresAt)
+                .build();
+
+        refreshTokenRepository.save(entity);
+        return token;
+    }
+
+    /**
+     * Проверяет refresh token: ищет по хешу, проверяет истечение и revoked.
+     * Возвращает Optional<RefreshToken>.
+     */
+    public Optional<RefreshToken> validateRefreshToken(String token) {
+        String hash = sha256Hex(token);
+        Optional<RefreshToken> found = refreshTokenRepository.findByTokenHash(hash);
+        if (found.isEmpty()) return Optional.empty();
+        RefreshToken r = found.get();
+        if (r.isRevoked()) return Optional.empty();
+        if (r.getExpiresAt().isBefore(Instant.now())) return Optional.empty();
+        return Optional.of(r);
+    }
+
+    /**
+     * Удалить/ревокировать refresh token (при logout или злоупотреблении).
+     */
+    public void revokeRefreshToken(RefreshToken refreshToken) {
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    /**
+     * Парсит и валидирует access token. Бросает JwtException если не валиден.
+     */
+    public Jws<Claims> parseAccessToken(String token) throws JwtException {
+        return Jwts.parserBuilder()
+                .setSigningKey(hmacKey)
+                .build()
+                .parseClaimsJws(token);
+    }
+
+    // ---- утилитарно: SHA-256 хеш
+    private static String sha256Hex(String input) {
+        try {
+            java.security.MessageDigest md = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) sb.append(String.format("%02x", b));
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to hash token", e);
+        }
+    }
+}

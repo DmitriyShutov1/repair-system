@@ -1,0 +1,118 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: users-postgres
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: users_user
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5433:5432"
+    volumes:
+      - users_pg_data:/var/lib/postgresql/data
+    networks:
+      - repair-network
+
+  warehouse-postgres:
+    image: postgres:15
+    container_name: warehouse-postgres
+    environment:
+      POSTGRES_DB: warehouse_db
+      POSTGRES_USER: warehouse_user
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5434:5432"
+    volumes:
+      - warehouse_pg_data:/var/lib/postgresql/data
+    networks:
+      - repair-network
+
+  orders-postgres:
+    image: postgres:15
+    container_name: orders-postgres
+    environment:
+      POSTGRES_DB: orders_db
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5435:5432"
+    volumes:
+      - orders_pg_data:/var/lib/postgresql/data
+    networks:
+      - repair-network
+
+  support-postgres:
+    image: postgres:15
+    container_name: support-postgres
+    environment:
+      POSTGRES_DB: support_db
+      POSTGRES_USER: support_user
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5436:5432"
+    volumes:
+      - support_pg_data:/var/lib/postgresql/data
+    networks:
+      - repair-network
+
+  users-service:
+    build: ./users-service
+    container_name: users-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+    networks:
+      - repair-network
+
+  support-service:
+    build: ./support-service
+    container_name: support-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - support-postgres
+    networks:
+      - repair-network
+
+  warehouse-service:
+    build: ./warehouse-service
+    container_name: warehouse-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - warehouse-postgres
+    networks:
+      - repair-network
+
+  gateway-service:
+    build: ./gateway-service
+    container_name: gateway-service
+    ports:
+      - "8080:8080"  # только gateway доступен снаружи
+    depends_on:
+      - users-service
+    networks:
+      - repair-network
+
+  orders-service:
+    build: ./orders-service
+    container_name: orders-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - orders-postgres
+    networks:
+      - repair-network
+
+volumes:
+  users_pg_data:
+  warehouse_pg_data:
+  orders_pg_data:
+  support_pg_data:
+
+networks:
+  repair-network:
+    driver: bridge

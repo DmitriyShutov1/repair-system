@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Repair System — Auth demo</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; }
+    input { display:block; margin:6px 0; padding:8px; width:300px; }
+    button { padding:8px 12px; margin:6px 0; }
+    pre { background:#f0f0f0; padding:10px; }
+    .col { display:inline-block; vertical-align:top; margin-right:20px; }
+  </style>
+</head>
+<body>
+  <h1>Repair System — Auth demo</h1>
+
+  <div class="col">
+    <h3>Register</h3>
+    <input id="regEmail" placeholder="email">
+    <input id="regPhone" placeholder="phone">
+    <input id="regPassword" placeholder="password" type="password">
+    <button onclick="register()">Register</button>
+  </div>
+
+  <div class="col">
+    <h3>Login</h3>
+    <input id="loginLogin" placeholder="email or phone">
+    <input id="loginPassword" placeholder="password" type="password">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div style="clear:both"></div>
+
+  <div style="margin-top:20px;">
+    <button onclick="callProtected()">Call protected /api/test/client</button>
+    <button onclick="doRefresh()">Force refresh</button>
+    <button onclick="logout()">Logout (revoke all)</button>
+    <button onclick="revokeSingle()">Revoke current refresh token</button>
+  </div>
+
+  <h3>State</h3>
+  <pre id="out"></pre>
+
+<script>
+// Proxy endpoint path (Flask)
+const API = "";
+
+// deviceId persisted per browser
+function getDeviceId() {
+  let id = localStorage.getItem('deviceId');
+  if (!id) {
+    id = 'dev-' + Math.random().toString(36).slice(2,12);
+    localStorage.setItem('deviceId', id);
+  }
+  return id;
+}
+
+function setTokens(access, refresh) {
+  if (access) localStorage.setItem('accessToken', access);
+  if (refresh) localStorage.setItem('refreshToken', refresh);
+}
+
+function clearTokens() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+}
+
+function out(obj){ document.getElementById('out').textContent = JSON.stringify(obj, null, 2); }
+
+// fetch wrapper that proxies through flask and handles refresh once
+async function apiFetch(path, opts = {}) {
+  opts.headers = opts.headers || {};
+  // attach device id
+  opts.headers['X-Device-Id'] = getDeviceId();
+  // attach User-Agent isn't necessary (browser sends), but keep for proxy
+  const token = localStorage.getItem('accessToken');
+  if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+
+  // request to our flask proxy: path should start with /api/ or /api/test...
+  let res = await fetch(path, opts);
+
+  if (res.status === 401) {
+    // Try refresh once
+    const refreshed = await tryRefresh();
+    if (refreshed) {
+      const token2 = localStorage.getItem('accessToken');
+      if (token2) opts.headers['Authorization'] = `Bearer ${token2}`;
+      res = await fetch(path, opts);
+    }
+  }
+  return res;
+}
+
+async function tryRefresh() {
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) { out({error: 'no refresh token'}); return false; }
+  try {
+    const r = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Device-Id': getDeviceId() },
+      body: JSON.stringify({ refreshToken })
+    });
+    if (r.status === 200) {
+      const j = await r.json();
+      // backend returns accessToken and refreshToken fields
+      setTokens(j.accessToken, j.refreshToken);
+      out({refreshed: true, tokens: {access: j.accessToken?.slice(0,20)+'...', refresh: j.refreshToken?.slice(0,20)+'...'}});
+      return true;
+    } else {
+      // refresh failed — clear tokens
+      clearTokens();
+      const text = await r.text();
+      out({error:'refresh failed', status: r.status, body: text});
+      return false;
+    }
+  } catch (e) {
+    out({error: e.toString()});
+    return false;
+  }
+}
+
+// UI actions
+async function register(){
+  const body = { email: document.getElementById('regEmail').value, phone: document.getElementById('regPhone').value, password: document.getElementById('regPassword').value };
+  const res = await fetch('/api/auth/register', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'X-Device-Id': getDeviceId() },
+    body: JSON.stringify(body)
+  });
+  const j = await res.json();
+  out({status: res.status, body: j});
+  if (res.status === 201) {
+    setTokens(j.accessToken, j.refreshToken);
+  }
+}
+
+async function login(){
+  const body = { login: document.getElementById('loginLogin').value, password: document.getElementById('loginPassword').value };
+  const res = await fetch('/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'X-Device-Id': getDeviceId() },
+    body: JSON.stringify(body)
+  });
+  const j = await res.json();
+  out({status: res.status, body: j});
+  if (res.status === 200) {
+    setTokens(j.accessToken, j.refreshToken);
+  }
+}
+
+async function callProtected(){
+  const res = await apiFetch('/api/test/client', { method: 'GET' });
+  const text = await res.text();
+  try { out({status: res.status, body: JSON.parse(text)}); } catch (e) { out({status: res.status, body: text}); }
+}
+
+async function doRefresh(){
+  await tryRefresh();
+}
+
+async function logout(){
+  const token = localStorage.getItem('accessToken');
+  const res = await fetch('/api/auth/logout', {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization': token ? `Bearer ${token}` : '', 'X-Device-Id': getDeviceId() }
+  });
+  out({status: res.status});
+  if (res.status === 204) clearTokens();
+}
+
+async function revokeSingle(){
+  const refreshToken = localStorage.getItem('refreshToken');
+  if (!refreshToken) { out({error:'no refresh token'}); return; }
+  const res = await fetch('/api/auth/revoke', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json', 'X-Device-Id': getDeviceId() },
+    body: JSON.stringify({ refreshToken })
+  });
+  out({status: res.status, text: await res.text()});
+  if (res.status === 204) clearTokens();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+Spring Security (Spring Boot 3) — защита эндпойнтов и интеграция с фильтрами.
+
+JWT (JSON Web Token) — stateless аутентификация между UI и микросервисами.
+
+BCrypt — хеширование паролей.
+
+io.jsonwebtoken (jjwt) или nimbus-jose-jwt — библиотека для генерации/валидации JWT (в примерах — jjwt).
+
+Токен короткой жизни (access token),  — refresh token.
+
+Проверка статуса пользователя на каждом запросе (через UserDetailsService или отдельную проверку в фильтре).
+
+Stateless — csrf отключаем, не храним сессии на сервере.
+
+
+
+1. SecurityConfig — настраивает SecurityFilterChain, AuthenticationManager, PasswordEncoder.
+
+2. JwtService — генерация/валидация JWT, парсинг claims.
+
+3. JwtAuthenticationFilter (extends OncePerRequestFilter) — извлекает токен из Authorization заголовка, валидирует, заполняет SecurityContext.
+
+4. CustomUserDetailsService — реализует UserDetailsService, загружает UserDetails из UserRepository.
+
+5. AuthController — /auth/login, /auth/register.
+
+6. DTOs: LoginRequest, RegisterRequest, AuthResponse.
+
+7. Конфигурация секретов: application.yml берет секрет из переменных окружения (не хранить секрет в репозитории).
+
+
+Подход к security — выбран современный и корректный: Spring Security (без сессий), JWT + refresh, BCrypt для паролей — 
+всё стандартно и подходит для дипломного уровня. Учти: при хранении refresh-токенов нужно продумать их инвалидацию 
+(в базе с датой истечения/статусом или через хэш токена), и при проверке JWT — всегда подтягивать статус пользователя (ACTIVE/BLOCKED) 
+из БД или UserDetails, чтобы нельзя было пользоваться аккаунтом после блокировки.
+
+
+com.system.users
+├── controller
+│   ├── AuthController          // login / register / refresh
+│   └── UserController          // /me, CRUD (admin)
+│
+├── dto
+│   ├── RegisterRequest
+│   ├── LoginRequest
+│   └── AuthResponse
+│
+├── entity
+│   ├── UserAccount
+│   ├── Branch
+│   └── RefreshToken
+│
+├── repository
+│   ├── UserAccountRepository
+│   ├── BranchRepository
+│   └── RefreshTokenRepository
+│
+├── service
+│   ├── UserService             // CRUD, регистрация
+│   ├── AuthService             // login, refresh
+│   └── RefreshTokenService     // revoke, rotate
+│
+├── security
+│   ├── CustomUserDetailsService
+│   ├── JwtAuthenticationFilter
+│   ├── SecurityConfig
+│   └── JwtService
+│
+└── config
+    └── SecurityBeansConfig     // PasswordEncoder, AuthenticationManager
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    com.system.users
+├── controller
+│   ├── AuthController          // login / register / refresh
+│           
+│
+├── dto
+│   ├── внутри других файлов
+│
+├── entity
+│   ├── UserAccount
+│   ├── Branch
+│   └── RefreshToken
+│
+├── repository
+│   ├── UserAccountRepository
+│   ├── BranchRepository
+│   └── RefreshTokenRepository
+│
+├── service
+│   ├── 
+│   ├── AuthService             // login, refresh
+│   └── 
+│
+├── security
+│   ├── CustomUserDetailsService
+│   ├── JwtAuthenticationFilter
+│   ├── SecurityConfig
+│   └── JwtService
+		JwtProperties
+│
+└── config
+    └── SecurityBeansConfig     // PasswordEncoder

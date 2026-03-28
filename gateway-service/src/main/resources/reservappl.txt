@@ -1,0 +1,132 @@
+server:
+  port: 8080
+  address: 0.0.0.0
+
+spring:
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: admin-users
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/crud/users/**
+
+            - id: admin-branches
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/crud/branches/**
+
+            - id: auth
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/auth/**
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
+      globalcors:
+            add-to-simple-url-handler-mapping: true   # ВОТ ЭТО КРИТИЧНО
+            cors-configurations:
+                  '[/**]':
+                  allowedOriginPatterns:
+                        - "*"
+                  allowedMethods:
+                        - GET
+                        - POST
+                        - PUT
+                        - DELETE
+                        - OPTIONS
+                  allowedHeaders:
+                        - "*"
+                  allowCredentials: true
+
+
+security:
+  jwt:
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wW4Csl9ytzuyw8oQbfR
+      Fjs8rxv9a72sufeLPXfHaqNh1q2VCZjCiCtjozVpBDQreW0SfOI/nfVnnYDHNy0Q
+      2jAizLQPUPmKtzq8dy9cUPCfIZS22SW7P9r02jf0InbGoNRXhNAU2n2q+OuhVawc
+      jQGcSTaDXVLqaayKxMPHTo75BZlhr+4ZlYFcwBUbhoQ+px+iWQRK/4z6QSu23zo6
+      pES+pfFuqIzuUR/5s6DTr9mn0bNEl67pjYWRMrDj0zVwF1TlmggWmP2xIlxECXTA
+      HqFj2Z5VHIhK/FJZyLXfkI6ChXeRkB1U7cMlLUV4aH5Sa/+Q2ppjlZx198NhF5SH
+      kQIDAQAB
+      -----END PUBLIC KEY-----
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    
+    
+    
+вечер 23.02
+
+
+server:
+  port: 8080
+  address: 0.0.0.0
+
+spring:
+  main:
+    web-application-type: reactive
+
+  cloud:
+    gateway:
+      server:
+        #webflux:
+          routes:
+            - id: admin-users
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/crud/users/**
+
+            - id: admin-branches
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/crud/branches/**
+
+            - id: auth
+              uri: http://users-service:8081
+              predicates:
+                - Path=/api/auth/**
+          httpclient:
+            connect-timeout: 5000
+            response-timeout: 10s
+      globalcors:
+            #add-to-simple-url-handler-mapping: true   # ВОТ ЭТО КРИТИЧНО
+            cors-configurations:
+              '[/**]':
+                allowedOriginPatterns:
+                  - "*"
+                allowedMethods:
+                  - GET
+                  - POST
+                  - PUT
+                  - DELETE
+                  - OPTIONS
+                allowedHeaders:
+                  - "*"
+                allowCredentials: true
+
+
+security:
+  jwt:
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wW4Csl9ytzuyw8oQbfR
+      Fjs8rxv9a72sufeLPXfHaqNh1q2VCZjCiCtjozVpBDQreW0SfOI/nfVnnYDHNy0Q
+      2jAizLQPUPmKtzq8dy9cUPCfIZS22SW7P9r02jf0InbGoNRXhNAU2n2q+OuhVawc
+      jQGcSTaDXVLqaayKxMPHTo75BZlhr+4ZlYFcwBUbhoQ+px+iWQRK/4z6QSu23zo6
+      pES+pfFuqIzuUR/5s6DTr9mn0bNEl67pjYWRMrDj0zVwF1TlmggWmP2xIlxECXTA
+      HqFj2Z5VHIhK/FJZyLXfkI6ChXeRkB1U7cMlLUV4aH5Sa/+Q2ppjlZx198NhF5SH
+      kQIDAQAB
+      -----END PUBLIC KEY-----
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG

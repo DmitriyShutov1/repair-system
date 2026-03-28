@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: users-postgres
+    environment:
+      POSTGRES_DB: users_db
+      POSTGRES_USER: users_user
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5432:5432"
+    volumes:
+      - users_pg_data:/var/lib/postgresql/data
+
+  users-service:
+    build: .
+    container_name: users-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - postgres
+
+volumes:
+  users_pg_data:

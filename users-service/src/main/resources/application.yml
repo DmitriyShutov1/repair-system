@@ -1,0 +1,100 @@
+server:
+  port: 8081
+  address: 0.0.0.0 
+
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/users_db
+    username: users_user
+    password: 123456
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    validate-on-migrate: true
+    clean-disabled: true
+  
+  mail:
+    host: smtp.yandex.ru 
+    port: 587
+    username: dmitschutov@yandex.ru
+    password: ehxwkovcrywxpgir
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          ssl:
+            enable: false
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+    protocol: smtp
+    test-connection: false  
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+security:
+  jwt:
+    algorithm: RS256
+    private-key: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDbBbgKyX3K3O7L
+      DyhBt9EWOzyvG/1rvay594s9d8dqo2HWrZUJmMKIK2OjNWkENCt5bRJ84j+d9Wed
+      gMc3LRDaMCLMtA9Q+Yq3Orx3L1xQ8J8hlLbZJbs/2vTaN/Qidsag1FeE0BTafar4
+      66FVrByNAZxJNoNdUupprIrEw8dOjvkFmWGv7hmVgVzAFRuGhD6nH6JZBEr/jPpB
+      K7bfOjqkRL6l8W6ojO5RH/mzoNOv2afRs0SXrumNhZEysOPTNXAXVOWaCBaY/bEi
+      XEQJdMAeoWPZnlUciEr8UlnItd+QjoKFd5GQHVTtwyUtRXhoflJr/5DammOVnHX3
+      w2EXlIeRAgMBAAECggEAC1xrFQgpocW/D0JshKgrzNrqxWyOwzF2Dbl0/A3EBtiN
+      wSyE4BgP8y9I/lTNaz3niWdqf5be1Os/YjClZMvOJXs8uuCWMM2Y7/M4hngq8jnh
+      D0VfDLmD0oahj9Y6MDV4DSymk4mVo1XEciAK4N5KJthQCo4s10DvTub31cgQBReV
+      4xUHJ31bPAQqHPyIaGm6+JZRJSHqFcE4SRXhsZ3WA1lo2GDT1ikZhJdrx+BMuTUY
+      q3pcBESBlEOYGX0XulLiZ2sxnbDCg4ZGxqz74Zag1q+wlT9sikEJWUHpRFd8w1Uf
+      xCPVfAvM6LeAq8eFRu+pW2ZogRmZDKo0uQcwe6uRrwKBgQD5Tud9DddAvspTFJQI
+      gL87/fOJvw1tVB1cVb75xID3ax7ktjJXB3TF8Vo9fWr6FTOIc4gV9hDdDgG9veId
+      Ld2W4yjNpGbIvHezg/q2bh5C+zGA6YhNJm/MW0nrgjKiIQN7bXL1i4t1cmplnUVm
+      fI34Ja4/EmgPRJdLJBrypCKDNwKBgQDg5rVW3qvlkyyBDhFUUPOOx6YvnGhCVwiY
+      qbVZectTeacPdPLF7I4Se8pgR4ZEuaaLw5pB+aW90kzJxfjklgKV+Jk1TLE3P5pp
+      1flwfvJzjQzqSOhzJRSSL63WNxf1uJj9SMVEteRfiXkZrnwEoi6boovqAsa+oKyA
+      /vcMmjk/dwKBgQCH9EKCzLh0w1acRd2QYX1n3s4fcQOGeldkkhIKLOHTiyQWv1Dm
+      ateAVmTKoYlkBYnLwI0WxNBfbBMBAPq8xNVRQmFu+1dd4oE4cSGYuKZiCo/tZ+z/
+      fZV8ENBX0PGBvpUiiwYk50tO6e0hqsk84XGeQBYsqQH8SYBj5rWXWnDDswKBgF57
+      7mFBiTwYuZC6ZUNkAv7QF5xW/GIqiF0Cp0Kg7W/zYuEWg8vtFr7jLOGICvuidzqu
+      gYcIJ754tHPsbSUzdICnAU6oGqeYW/nswC+n1Zn//xYKbUW6pUrJJyIg4TsFQ5jd
+      UqsMM5aDfdHxQP79V9Fg16EHa5G4lOBYvVeZD0X/AoGAUDpK2sFn0PDIOk/u5Us3
+      kV3jKouKLoIXiMPyqzmm6ayksuTo2itIs15O3/OqKOxy7n+oJQeJvFpsuFnlHM5A
+      d+fI5oNr2o5mN8aSXAlHJLktmG4V7yArzHtaAHRZoRLRxJANGygbNGxvKq8pztTi
+      mfER+Ds61M7Ov55i/SKUvJU=
+      -----END PRIVATE KEY-----
+
+    public-key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wW4Csl9ytzuyw8oQbfR
+      Fjs8rxv9a72sufeLPXfHaqNh1q2VCZjCiCtjozVpBDQreW0SfOI/nfVnnYDHNy0Q
+      2jAizLQPUPmKtzq8dy9cUPCfIZS22SW7P9r02jf0InbGoNRXhNAU2n2q+OuhVawc
+      jQGcSTaDXVLqaayKxMPHTo75BZlhr+4ZlYFcwBUbhoQ+px+iWQRK/4z6QSu23zo6
+      pES+pfFuqIzuUR/5s6DTr9mn0bNEl67pjYWRMrDj0zVwF1TlmggWmP2xIlxECXTA
+      HqFj2Z5VHIhK/FJZyLXfkI6ChXeRkB1U7cMlLUV4aH5Sa/+Q2ppjlZx198NhF5SH
+      kQIDAQAB
+      -----END PUBLIC KEY-----
+    secret: "dGVzdC1qd3Qtc2VjcmV0LWtleS1mb3ItZGlwbG9tLTIwMjY="
+    access-token-expiration-ms: 10000
+    refresh-token-expiration-ms: 259200000
+    refresh-token-hmac-secret: "a8xK9pL2qR5vN7mB4cW1xY6zS8dF9gH2jK4lZ7xP3qR5tV8nB1mC4wX7yZ0aF3dG6hJ9kL2n"
+#
+#logging:
+#  level:
+#    org.springframework.transaction: TRACE
+##    org.springframework: DEBUG
+#    org.hibernate.engine.transaction.internal.TransactionImpl: DEBUG
+#    org.flywaydb: DEBUG
+#    org.springframework.mail: DEBUG
