@@ -2,6 +2,8 @@ package com.system.orders.client;
 
 import com.system.orders.dto.OrderItemRequest;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,7 +26,32 @@ public class SupportClient {
     @Value("${services.support.url:http://support-service:8084}")
     private String supportBaseUrl;
     
-    public Boolean startWarranty(Long supportRequestId, Long masterId) {
+    @Retry(name = "supportRetry")
+    @CircuitBreaker(name = "supportCircuit", fallbackMethod = "fallbackVoid")
+    public void cancelWarranty(Long supportRequestId, boolean refund) {
+
+        String url = UriComponentsBuilder
+                .fromHttpUrl(supportBaseUrl)
+                .path("/api/support-requests/{id}/cancel-warranty")
+                .queryParam("refund", refund)
+                .buildAndExpand(supportRequestId)
+                .toUriString();
+
+        restTemplate.postForEntity(url, null, Void.class);
+
+        log.info("Cancel warranty: supportRequestId={}, refund={}",
+                supportRequestId, refund);
+    }
+
+    private void fallbackVoid(Long supportRequestId, boolean refund, Throwable ex) {
+        log.error("Support fallback triggered: supportRequestId={}", supportRequestId, ex);
+        throw new RuntimeException("Support service unavailable", ex);
+    }
+    
+    
+    @Retry(name = "supportRetry")
+    @CircuitBreaker(name = "supportCircuit", fallbackMethod = "fallbackVoid")
+    public void startWarranty(Long supportRequestId, Long masterId) {
 
         String url = UriComponentsBuilder
                 .fromHttpUrl(supportBaseUrl)
@@ -37,61 +64,15 @@ public class SupportClient {
 
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        try {
+        restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
 
-            restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    Void.class
-            );
-
-            log.info("Start warranty sent: supportRequestId={}, masterId={}",
-                    supportRequestId, masterId);
-
-            return true;
-
-        } catch (RestClientException e) {
-
-            log.error("Failed start warranty: supportRequestId={}",
-                    supportRequestId, e);
-
-            return null;
-        }
+        log.info("Start warranty: supportRequestId={}, masterId={}",
+                supportRequestId, masterId);
     }
     
-    public Boolean cancelWarranty(Long supportRequestId, boolean refund) {
-
-        String url = UriComponentsBuilder
-                .fromHttpUrl(supportBaseUrl)
-                .path("/api/support-requests/{id}/cancel-warranty")
-                .queryParam("refund", refund)
-                .buildAndExpand(supportRequestId)
-                .toUriString();
-
-        try {
-
-            restTemplate.postForEntity(
-                    url,
-                    null,
-                    Void.class
-            );
-
-            log.info("Cancel warranty: supportRequestId={}, refund={}",
-                    supportRequestId, refund);
-
-            return true;
-
-        } catch (RestClientException e) {
-
-            log.error("Failed cancel warranty: supportRequestId={}",
-                    supportRequestId, e);
-
-            return null;
-        }
-    }
-    
-    public Boolean completeWarranty(
+    @Retry(name = "supportRetry")
+    @CircuitBreaker(name = "supportCircuit", fallbackMethod = "fallbackVoidComplete")
+    public void completeWarranty(
             Long supportRequestId,
             Long masterId,
             List<OrderItemRequest> parts) {
@@ -109,26 +90,20 @@ public class SupportClient {
         HttpEntity<List<OrderItemRequest>> entity =
                 new HttpEntity<>(parts, headers);
 
-        try {
+        restTemplate.exchange(url, HttpMethod.POST, entity, Void.class);
 
-            restTemplate.exchange(
-                    url,
-                    HttpMethod.POST,
-                    entity,
-                    Void.class
-            );
+        log.info("Complete warranty: supportRequestId={}, masterId={}, parts={}",
+                supportRequestId, masterId, parts.size());
+    }
+    
+    private void fallbackVoid(Long supportRequestId, Long masterId, Throwable ex) {
+        log.error("Support start warranty fallback: id={}", supportRequestId, ex);
+        throw new RuntimeException("Support unavailable", ex);
+    }
 
-            log.info("Complete warranty: supportRequestId={}, masterId={}, parts={}",
-                    supportRequestId, masterId, parts.size());
-
-            return true;
-
-        } catch (RestClientException e) {
-
-            log.error("Failed complete warranty: supportRequestId={}",
-                    supportRequestId, e);
-
-            return null;
-        }
+    private void fallbackVoidComplete(Long supportRequestId, Long masterId,
+                                     List<OrderItemRequest> parts, Throwable ex) {
+        log.error("Support complete fallback: id={}", supportRequestId, ex);
+        throw new RuntimeException("Support unavailable", ex);
     }
 }

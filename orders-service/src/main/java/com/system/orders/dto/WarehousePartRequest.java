@@ -20,10 +20,9 @@ public class WarehousePartRequest {
 
     private Boolean active;
 
- // Ценовые поля - все три
-    private BigDecimal costPrice;      // себестоимость
-    private BigDecimal clientPrice;    // цена для клиента
-    private BigDecimal masterPercentage; // процент мастера
+    private BigDecimal costPrice;      
+    private BigDecimal clientPrice;    
+    private BigDecimal masterPercentage; 
 
     private Integer quantity;
 }

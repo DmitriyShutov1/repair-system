@@ -43,6 +43,12 @@ public class SupportRequest {
 
     @Column(columnDefinition = "text")
     private String description;
+    
+    @Column(name = "device_serial", length = 100)    // ← новое
+    private String deviceSerial;
+
+    @Column(name = "device_model", length = 255)     // ← новое
+    private String deviceModel;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

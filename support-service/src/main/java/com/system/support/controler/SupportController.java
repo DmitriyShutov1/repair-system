@@ -22,8 +22,7 @@ import lombok.*;
 public class SupportController {
 
     private final SupportService supportService;
-
-    //только с фронта
+    
     @PostMapping
     public ResponseEntity<Boolean> createSupportRequest(
             @RequestBody CreateSupportRequestDto dto,
@@ -35,7 +34,6 @@ public class SupportController {
         return ResponseEntity.ok(true);
     }
 
-    //только с фронта
     @PostMapping("/{id}/require-return")
     public ResponseEntity<SupportRequest> requireReturn(
             @PathVariable Long id) {
@@ -44,7 +42,6 @@ public class SupportController {
         );
     }
 
-    //только с фронта
     @PostMapping("/{id}/confirm-return")
     public ResponseEntity<SupportRequest> confirmReturn(
             @PathVariable Long id) {
@@ -53,7 +50,6 @@ public class SupportController {
         );
     }
 
-    //только с orders
     @PostMapping("/{id}/start-warranty")
     public ResponseEntity<SupportRequest> startWarrantyRepair(
             @PathVariable Long id,
@@ -63,7 +59,6 @@ public class SupportController {
         );
     }
 
-    //только с orders
     @PostMapping("/{id}/cancel-warranty")
     public ResponseEntity<SupportRequest> cancelWarrantyRepair(
             @PathVariable Long id,
@@ -73,7 +68,6 @@ public class SupportController {
         );
     }
 
-    //только с orders
     @PostMapping("/{id}/complete-warranty")
     public ResponseEntity<SupportRequest> completeWarrantyRepair(
             @PathVariable Long id,

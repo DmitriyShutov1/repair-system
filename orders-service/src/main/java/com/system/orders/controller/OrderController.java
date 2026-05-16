@@ -1,13 +1,21 @@
 package com.system.orders.controller;
 
 import com.system.orders.dto.CreateOrderRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import com.system.orders.dto.OrderBranchPair;
 import com.system.orders.dto.OrderDetailsDto;
 import com.system.orders.dto.OrderResponse;
 import com.system.orders.dto.SetOrderItemsRequest;
+import com.system.orders.dto.TestDto;
+import com.system.orders.dto.TestResultDto;
+import com.system.orders.dto.TestSessionDto;
+import com.system.orders.dto.TestSessionStepDto;
 import com.system.orders.entity.Order;
 import com.system.orders.service.OrderItemService;
 import com.system.orders.service.OrderService;
+import com.system.orders.service.PdfActService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -100,9 +108,9 @@ public class OrderController {
 
     private final OrderService orderService;
     private final OrderItemService orderItemService;
+    private final PdfActService pdfActService;
 
     
-    //страница 1
     @PostMapping
     public OrderResponse createOrder(
             @RequestBody CreateOrderRequest request,
@@ -114,7 +122,6 @@ public class OrderController {
     }
 
 
-    //страница 3
     @PostMapping("/items")
     public Map<String, String> setItems(
             @RequestBody SetOrderItemsRequest request,
@@ -127,7 +134,6 @@ public class OrderController {
     }
 
 
-    //страница 3
     @PostMapping("/{orderId}/confirm")
     public OrderResponse confirmOrder(
             @PathVariable Long orderId,
@@ -139,7 +145,6 @@ public class OrderController {
     }
 
 
-    //страница 3
     @PostMapping("/{orderId}/complete")
     public OrderResponse completeOrder(@PathVariable Long orderId, @RequestHeader("X-User-Id") Long userId, @RequestHeader("X-User-Role") String role) {
 
@@ -147,7 +152,6 @@ public class OrderController {
     }
 
 
-    //страница 3
     @PostMapping("/{orderId}/issue")
     public OrderResponse issueOrder(
             @PathVariable Long orderId,
@@ -160,7 +164,6 @@ public class OrderController {
     }
 
 
-    //страница 3
     @PostMapping("/{orderId}/cancel")
     public OrderResponse cancelOrder(
             @PathVariable Long orderId,
@@ -200,7 +203,6 @@ public class OrderController {
         
         for (OrderBranchPair pair : pairs) {
             try {
-                // Вызываем существующий метод с branchId из пары
                 orderService.cancelOrder(
                     pair.getOrderId(), 
                     pair.getBranchId(), 
@@ -214,7 +216,6 @@ public class OrderController {
         }
     }
     
-    //страница 2
     @PostMapping("/master/my-orders")
     public Page<OrderResponse> getMasterOrders(
             @RequestHeader("X-User-Id") Long userId,
@@ -226,7 +227,6 @@ public class OrderController {
         return ordersPage.map(this::mapToResponse);
     }
     
-    //страница клиента
     @PostMapping("/client/my-active-orders")
     public Page<OrderResponse> getClientActiveOrders(
             @RequestHeader("X-User-Id") Long userId,
@@ -238,7 +238,6 @@ public class OrderController {
         
     }
     
-    //страница клиента
     @PostMapping("/client/my-issued-orders")
     public Page<OrderResponse> getClientIssuedOrders(
             @RequestHeader("X-User-Id") Long userId,
@@ -258,7 +257,6 @@ public class OrderController {
         return mapToResponse(orderService.getOrderById(orderId));
     }
     
-    //страница 3
     @PostMapping("/info")
     public OrderDetailsDto getOrderIndo(
             @RequestHeader("X-User-Role") String role, 
@@ -275,6 +273,8 @@ public class OrderController {
                 .warrantyId(order.getWarrantyId())
                 .status(order.getStatus())
                 .diagnosticResult(order.getDiagnosticResult())
+                .deviceSerial(order.getDeviceSerial())   
+                .deviceModel(order.getDeviceModel())     
                 .clientApproved(order.getClientApproved())
                 .pickupCode(order.getPickupCode())
                 .createdAt(order.getCreatedAt())
@@ -292,4 +292,72 @@ public class OrderController {
     	return Map.of("pickupCode", orderService.getPickupCode(orderId));
     }
     
+    @DeleteMapping("/{orderId}/items")
+    public Map<String, String> removeItems(
+            @PathVariable Long orderId,
+            @RequestBody List<Long> itemIds,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-Branch-Id") Long branchId,
+            @RequestHeader("X-User-Role") String role
+    ) {
+        orderItemService.removeOrderItems(orderId, itemIds, userId, branchId);
+        return Map.of("status", "ok");
+    }
+    
+    
+    @GetMapping("/tests")
+    public List<TestDto> getTests(
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Role") String role
+    ) {
+        return orderService.getAllTests();
+    }
+    
+    
+    @PostMapping("/{orderId}/tests/results")
+    public Map<String, String> saveTestResults(
+            @PathVariable Long orderId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Role") String role,
+            @RequestBody List<TestResultDto> results
+    ) {
+        orderService.saveTestResults(orderId, userId, results);
+        return Map.of("status", "ok");
+    }
+    
+    
+    @GetMapping("/{orderId}/tests/sessions")
+    public List<TestSessionDto> getTestSessions(
+            @PathVariable Long orderId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Role") String role
+    ) {
+        return orderService.getSessionsByOrder(orderId);
+    }
+
+    
+    @GetMapping("/tests/sessions/{sessionId}/steps")
+    public List<TestSessionStepDto> getTestSessionSteps(
+            @PathVariable Long sessionId,
+            @RequestHeader("X-User-Id") Long userId,
+            @RequestHeader("X-User-Role") String role
+    ) {
+        return orderService.getStepsBySession(sessionId);
+    }
+    
+    @GetMapping("/{orderId}/repair-act")
+    public ResponseEntity<byte[]> downloadRepairAct(
+            @PathVariable Long orderId
+    ) {
+
+        byte[] pdf = pdfActService.generateRepairAct(orderId);
+
+        return ResponseEntity.ok()
+                .header(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=repair-act-" + orderId + ".pdf"
+                )
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    }
 }

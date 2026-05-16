@@ -91,7 +91,6 @@ public class RefreshTokenService {
         int revokedCount = refreshTokenRepository.revokeAllActiveTokensForDevice(user, deviceId);
         log.debug("Revoked {} previous refresh tokens for user={} device={}", revokedCount, userId, deviceId);
 
-        // TTL: use Duration.ofMillis for precise milliseconds handling
         LocalDateTime expiresAt = LocalDateTime.now()
                 .plus(Duration.ofMillis(jwtProperties.getRefreshTokenExpirationMs()));
 
@@ -111,12 +110,9 @@ public class RefreshTokenService {
 
             try {
                 refreshTokenRepository.save(refreshToken);
-                // Successful creation — return raw token (show it to client once)
                 return new RefreshTokenCreateResult(tokenRaw, expiresAt);
             } catch (DataIntegrityViolationException ex) {
-                // Possible hash collision or unique constraint violation — retry
                 log.warn("Refresh token hash collision or unique constraint violation (attempt {}/{}) — regenerating", attempt, MAX_GENERATION_ATTEMPTS);
-                // try again
             }
         }
 
@@ -136,18 +132,15 @@ public class RefreshTokenService {
 
         RefreshToken token = tokenOpt.get();
 
-        // Check revoked
         if (token.isRevoked()) {
             log.warn("REUSE DETECTED for userId={}", safeGetUserId(token));
             return Optional.empty();
         }
 
-        // Check expiry
         if (token.isExpired()) {
             return Optional.empty();
         }
 
-        // Check user status (blocked users cannot refresh)
         UserAccount user = token.getUser();
         if (user == null) {
             log.warn("Refresh token references missing user (tokenId={})", token.getId());
@@ -176,12 +169,10 @@ public class RefreshTokenService {
         RefreshToken oldToken = refreshTokenRepository.findByTokenHash(oldHash)
                 .orElseThrow(() -> new IllegalArgumentException("Refresh token not found"));
 
-        // If token already revoked -> reuse attempt
         if (oldToken.isRevoked()) {
             Long uid = safeGetUserId(oldToken);
             log.error("TOKEN REUSE ATTEMPT detected for userId={}", uid);
 
-            // Ensure revocation of all tokens is committed even if we subsequently throw
             userAccountRepository.findById(uid).ifPresent(user -> {
                 List<RefreshToken> tokens = refreshTokenRepository.findAllByUser(user);
                 if (tokens.isEmpty()) return;
@@ -189,7 +180,6 @@ public class RefreshTokenService {
                 refreshTokenRepository.saveAll(tokens);
                 log.info("Revoked {} refresh tokens for userId={}", tokens.size(), uid);
             });
-            // Throw to signal client that reuse occurred (client should force re-login)
             throw new IllegalStateException("Refresh token reuse detected");
         }
 
@@ -197,7 +187,6 @@ public class RefreshTokenService {
             throw new IllegalStateException("Refresh token expired");
         }
 
-        // Normal rotation: mark old token revoked and persist, then create a new one
         oldToken.setRevoked(true);
         refreshTokenRepository.save(oldToken);
 
@@ -209,20 +198,6 @@ public class RefreshTokenService {
         );
     }
 
-    /**
-     * Revoke all tokens for a user and commit immediately in a separate transaction so
-     * that revocation is not rolled back if caller throws an exception afterwards.
-     */
-//    @Transactional(propagation = Propagation.REQUIRES_NEW)
-//    public void revokeAllForUser(Long userId) {
-//        userAccountRepository.findById(userId).ifPresent(user -> {
-//            List<RefreshToken> tokens = refreshTokenRepository.findAllByUser(user);
-//            if (tokens.isEmpty()) return;
-//            tokens.forEach(rt -> rt.setRevoked(true));
-//            refreshTokenRepository.saveAll(tokens);
-//            log.info("Revoked {} refresh tokens for userId={}", tokens.size(), userId);
-//        });
-//    }
 
     @Transactional
     public void removeExpiredTokens() {
@@ -244,7 +219,7 @@ public class RefreshTokenService {
         Optional<RefreshToken> opt = refreshTokenRepository.findByTokenHash(hash);
         if (opt.isEmpty()) return false;
         RefreshToken token = opt.get();
-        if (token.isRevoked()) return false; // уже revoked
+        if (token.isRevoked()) return false; 
         token.setRevoked(true);
         refreshTokenRepository.save(token);
         log.info("RefreshTokenService: revoked token id={} for userId={}", token.getId(), token.getUser() != null ? token.getUser().getId() : null);

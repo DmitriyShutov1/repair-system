@@ -14,17 +14,9 @@ import jakarta.transaction.Transactional;
 @Repository
 public interface StockBalanceRepository extends JpaRepository<StockBalance, Long> {
 
-    // =========================================================
-    // SEARCH BY PART + BRANCH
-    // =========================================================
-
     Optional<StockBalance> findByPartIdAndBranchId(Long partId, Long branchId);
     
     Optional<StockBalance> findByBranchId(Long branchId);
-
-    // =========================================================
-    // UPDATE QUANTITY (optimistic safe)
-    // =========================================================
 
     @Modifying
     @Transactional
@@ -47,17 +39,9 @@ public interface StockBalanceRepository extends JpaRepository<StockBalance, Long
            """)
     int updateQuantityById(Long id, Integer quantity, Long version);
 
-    // =========================================================
-    // DELETE ALL BY BRANCH
-    // =========================================================
-
     @Modifying
     @Transactional
     void deleteAllByBranchId(Long branchId);
-
-    // =========================================================
-    // DELETE ALL BY PART
-    // =========================================================
 
     @Modifying
     @Transactional

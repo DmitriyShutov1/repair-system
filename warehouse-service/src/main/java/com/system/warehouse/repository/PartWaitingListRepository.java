@@ -13,9 +13,7 @@ import java.util.Optional;
 @Repository
 public interface PartWaitingListRepository extends JpaRepository<PartWaitingList, Long> {
 
-    /**
-     * Поиск записи по part_id и branch_id
-     */
+
     @Query("""
             SELECT w
             FROM PartWaitingList w
@@ -25,6 +23,8 @@ public interface PartWaitingListRepository extends JpaRepository<PartWaitingList
             ORDER BY w.createdAt 
            """)
     List<PartWaitingList> findActiveByPartIdAndBranchId(Long partId, Long branchId);
+    
+    boolean existsByOrderIdAndClosedFalse(Long orderId);
 
     
     Optional<PartWaitingList> findByOrderIdAndPartIdAndBranchIdAndClosedFalse(
@@ -33,9 +33,7 @@ public interface PartWaitingListRepository extends JpaRepository<PartWaitingList
             Long branchId
     );
 
-    /**
-     * Изменение quantity
-     */
+
     @Modifying
     @Transactional
     @Query("""
@@ -56,9 +54,7 @@ public interface PartWaitingListRepository extends JpaRepository<PartWaitingList
     int setThisClosed(Long id);
 
 
-    /**
-     * Агрегация количества по order_id
-     */
+
     @Query("""
             SELECT COALESCE(SUM(w.requiredQuantity),0)
             FROM PartWaitingList w
@@ -68,9 +64,6 @@ public interface PartWaitingListRepository extends JpaRepository<PartWaitingList
     Integer sumRequiredQuantityByOrderId(Long orderId);
 
 
-    /**
-     * Найти запись по id (явно Optional)
-     */
     Optional<PartWaitingList> findById(Long id);
 
     

@@ -8,7 +8,6 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class UpdateUserRequest {
-    // nullable — only provided fields will be changed
     private String email;
     private String phone;
     private Long branchId;

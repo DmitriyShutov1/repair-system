@@ -11,9 +11,14 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.oauth2.jwt.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.system.gateway.DTO.ErrorResponse;
+
 import reactor.core.publisher.Mono;
 
 import java.security.interfaces.RSAPublicKey;
+import java.time.Instant;
 import java.util.List;
 
 import org.springframework.security.oauth2.jwt.JwtValidationException;
@@ -29,7 +34,6 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
 
     private final JwtDecoder jwtDecoder;
 
-    // ✅ список публичных endpoint'ов
     private static final List<String> PUBLIC_ENDPOINTS = List.of(
             "/api/auth/login",
             "/api/crud/users/reset-password",
@@ -47,16 +51,12 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
                              org.springframework.cloud.gateway.filter.GatewayFilterChain chain) {
 
     	
-    	// ✅ ВСЕГДА пропускаем CORS preflight
         if (CorsUtils.isPreFlightRequest(exchange.getRequest())) {
             return chain.filter(exchange);
         }
         String path = exchange.getRequest().getURI().getPath();
         String method = exchange.getRequest().getMethod().name();
-        
-//        if (method.equalsIgnoreCase("OPTIONS")) { 
-//        	return chain.filter(exchange); 
-//        }
+
         
         if (isPublic(path)) {
             return chain.filter(exchange);
@@ -114,16 +114,37 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-        return exchange.getResponse().setComplete();
+        return writeError(exchange, HttpStatus.UNAUTHORIZED, "Unauthorized");
     }
     
     private Mono<Void> tokenExpired(ServerWebExchange exchange) {
+        return writeError(exchange, HttpStatus.UNAUTHORIZED, "TOKEN_EXPIRED");
+    }
+    
+    private Mono<Void> writeError(ServerWebExchange exchange, HttpStatus status, String message) {
 
-        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        exchange.getResponse().setStatusCode(status);
         exchange.getResponse().getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        String body = "{\"error\":\"TOKEN_EXPIRED\"}";
+        String body;
+
+        try {
+            ErrorResponse response = ErrorResponse.builder()
+                    .timestamp(Instant.now())
+                    .status(status.value())
+                    .error(status.getReasonPhrase())
+                    .message(message)
+                    .path(exchange.getRequest().getURI().getPath())
+                    .build();
+
+            ObjectMapper mapper = new ObjectMapper();
+            body = mapper.writeValueAsString(response);
+
+        } catch (Exception e) {
+            log.error("Error serialization failed", e);
+
+            body = "{\"message\":\"" + message + "\"}";
+        }
 
         var buffer = exchange.getResponse()
                 .bufferFactory()
@@ -131,9 +152,10 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
 
         return exchange.getResponse().writeWith(Mono.just(buffer));
     }
+    
 
     @Override
     public int getOrder() {
-        return -100; // раньше routing
+        return -100; 
     }
 }

@@ -53,4 +53,11 @@ public interface StockMovementRepository extends JpaRepository<StockMovement, Lo
 
     // Последние N движений по филиалу
     Page<StockMovement> findByBranchIdOrderByCreatedAtDesc(Long branchId, Pageable pageable);
+    
+    @Query("SELECT COALESCE(SUM(sm.quantity), 0) FROM StockMovement sm " +
+    	       "WHERE sm.orderId = :orderId AND sm.part.id = :partId AND sm.movementType = :type")
+    	Integer sumQuantityByOrderIdAndPartIdAndMovementType(
+    	        @Param("orderId") Long orderId,
+    	        @Param("partId") Long partId,
+    	        @Param("type") MovementType type);
 }

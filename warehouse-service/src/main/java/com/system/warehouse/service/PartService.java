@@ -23,10 +23,6 @@ public class PartService {
 
     private final PartRepository partRepository;
 
-    // ==============================
-    // CREATE
-    // ==============================
-
     @Transactional
     public PartResponse create(PartCreateRequest request) {
 
@@ -45,10 +41,6 @@ public class PartService {
 
         return mapToResponse(saved);
     }
-
-    // ==============================
-    // UPDATE
-    // ==============================
 
     @Transactional
     public PartResponse update(Long id, PartUpdateRequest request) {
@@ -73,10 +65,6 @@ public class PartService {
         return mapToResponse(updated);
     }
 
-    // ==============================
-    // DELETE (SOFT)
-    // ==============================
-
     @Transactional
     public void delete(Long id) {
 
@@ -90,20 +78,12 @@ public class PartService {
         partRepository.softDelete(id);
     }
 
-    // ==============================
-    // FIND BY ID
-    // ==============================
-
     public PartResponse findById(Long id) {
         Part part = partRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Part not found"));
 
         return mapToResponse(part);
     }
-
-    // ==============================
-    // FIND BY ARTICLE
-    // ==============================
 
     public PartResponse findByArticleNumber(String articleNumber) {
         Part part = partRepository.findByArticleNumber(articleNumber)
@@ -112,19 +92,11 @@ public class PartService {
         return mapToResponse(part);
     }
 
-    // ==============================
-    // FIND BY CATEGORY
-    // ==============================
-
     public Page<PartResponse> findByCategory(PartCategory category, Pageable pageable, Boolean active) {
         return partRepository
                 .findAllByCategoryAndActive(category, active, pageable)
                 .map(this::mapToResponse);
     }
-
-    // ==============================
-    // SEARCH BY NAME (ILIKE + similarity)
-    // ==============================
 
     public Page<PartResponse> searchByName(String query, Pageable pageable) {
         return partRepository
@@ -184,13 +156,6 @@ public class PartService {
                 "Part not found"));
     }
     
-
-    // ==============================
-    // MAPPER
-    // ==============================
-    
-    
-
     private PartResponse mapToResponse(Part part) {
         return PartResponse.builder()
                 .id(part.getId())

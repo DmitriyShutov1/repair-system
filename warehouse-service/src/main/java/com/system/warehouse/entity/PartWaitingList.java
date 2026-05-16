@@ -58,9 +58,6 @@ public class PartWaitingList {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    /**
-     * Явный бизнес-метод вместо setClosed(true)
-     */
     public void close() {
         this.closed = true;
     }

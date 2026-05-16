@@ -24,10 +24,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     
     List<Order> findByStatusAndMasterId(Order.Status status, Long masterId);
     
-    // ===============================
-    // Проверка активных заказов по item
-    // ===============================
-
     @Query("""
         SELECT COUNT(oi) > 0
         FROM OrderItem oi
@@ -50,11 +46,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     	boolean existsActiveOrderForItem(Long itemId, String itemType, Order.Status status);
 
 
-
-    // ===============================
-    // Заказы мастера
-    // ===============================
-    
     Page<Order> findByStatusAndMasterId(
             Order.Status status,
             Long masterId,
@@ -73,17 +64,10 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             Pageable pageable
     );
 
-    // активные (не выданные)
     List<Order> findByMasterIdAndStatusNot(Long masterId, Order.Status status);
 
-    // выданные
     List<Order> findByMasterIdAndStatus(Long masterId, Order.Status status);
 
-
-
-    // ===============================
-    // Заказы клиента
-    // ===============================
 
     
     Page<Order> findByClientIdAndStatusNot(
@@ -98,14 +82,11 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
             Pageable pageable
     );
     
-    // активные
     List<Order> findByClientIdAndStatusNot(Long clientId, Order.Status status);
 
-    // выданные
     List<Order> findByClientIdAndStatus(Long clientId, Order.Status status);
     
     
- // Добавляем правильный метод с boolean
     @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END " +
            "FROM Order o WHERE o.masterId = :masterId AND o.status != :status")
     boolean existsByMasterIdAndStatusNot(Long masterId, Order.Status status);

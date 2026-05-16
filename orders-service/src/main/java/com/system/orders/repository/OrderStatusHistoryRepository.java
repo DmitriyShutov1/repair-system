@@ -11,13 +11,10 @@ import java.util.Optional;
 @Repository
 public interface OrderStatusHistoryRepository extends JpaRepository<OrderStatusHistory, Long> {
 
-    // Получить всю историю изменения статусов заказа
     List<OrderStatusHistory> findByOrderOrderIdOrderByChangedAtAsc(Long orderId);
 
-    // Получить последнюю запись статуса
     Optional<OrderStatusHistory> findTopByOrderOrderIdOrderByChangedAtDesc(Long orderId);
 
-    // Найти изменения, сделанные конкретным пользователем
     List<OrderStatusHistory> findByChangedBy(Long changedBy);
 
 }

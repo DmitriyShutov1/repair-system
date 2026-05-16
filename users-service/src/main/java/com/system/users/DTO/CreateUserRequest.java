@@ -14,16 +14,12 @@ import lombok.*;
 @Builder
 public class CreateUserRequest {
 
-    // phone required in entity
     @NotBlank
     private String phone;
 
-    // optional but if present must be valid format (simplified pattern)
     private String email;
 
-    // optional role; if null — CLIENT
     private UserAccount.Role role;
 
-    // optional branch id
     private Long branchId;
 }

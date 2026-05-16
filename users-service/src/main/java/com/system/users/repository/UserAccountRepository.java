@@ -35,11 +35,9 @@ public interface UserAccountRepository extends JpaRepository<UserAccount, Long> 
 
     Optional<UserAccount> findByIdAndStatus(Long id, UserAccount.Status status);
     
-    // Fetch user with branch (join fetch) — useful if вы хотите иметь branch в detached entity
     @Query("select u from UserAccount u left join fetch u.branch where u.id = :id")
     Optional<UserAccount> findByIdWithBranch(@Param("id") Long id);
 
-    // Быстрый метод, возвращающий только branch id (рекомендую)
     @Query("select b.id from UserAccount u left join u.branch b where u.id = :id")
     Optional<Long> findBranchIdByUserId(@Param("id") Long id);
 }

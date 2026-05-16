@@ -3,8 +3,14 @@
 	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<item key="replaceBarOpen" value="false"/>
 	<list key="searchhistory">
-		<item value="supinfo"/>
+		<item value="outboxService"/>
+		<item value="Run"/>
+		<item value="warehouseClient"/>
 		<item value="supportClient"/>
+		<item value="supportClient&apos;"/>
+		<item value="usersClient"/>
+		<item value="kafka"/>
+		<item value="supinfo"/>
 		<item value="inv"/>
 		<item value="OrderItemDto"/>
 		<item value="orderItemRepository"/>
@@ -12,9 +18,5 @@
 		<item value="deleteAllByPart"/>
 		<item value="createStock"/>
 		<item value="MovementType"/>
-		<item value="delete"/>
-		<item value="maven"/>
-		<item value="поменял"/>
-		<item value="revokeAllForUser"/>
 	</list>
 </section>

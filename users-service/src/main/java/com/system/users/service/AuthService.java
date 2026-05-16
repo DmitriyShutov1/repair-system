@@ -17,17 +17,6 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 
-/**
- * AuthService — регистрация, логин и refresh flow.
- *
- * - constructor injection
- * - register/login/refresh возвращают access + refresh tokens
- * - refresh flow использует RefreshTokenService (rotation + reuse detection)
- *
- * Примечания:
- * - RefreshTokenService обеспечивает безопасное хранение и rotation refresh-токенов.
- * - AuthService валидирует статус пользователя и выдаёт access token через JwtService.
- */
 @Service
 public class AuthService {
 
@@ -53,9 +42,6 @@ public class AuthService {
         this.refreshTokenService = refreshTokenService;
     }
 
-    /* -------------------------
-       DTOs (records)
-       ------------------------- */
     public static record RegisterRequest(
             String email,
             String phone,
@@ -63,98 +49,22 @@ public class AuthService {
     ) {}
 
     public static record LoginRequest(
-            String login,   // email or phone
+            String login,   
             String password
     ) {}
 
-    /**
-     * Response contains access token (+expiry) and refresh token raw value (+expiry).
-     * Refresh raw token MUST be stored by client securely; server stores only hash.
-     */
     public static record AuthResponse(
             String accessToken,
             long accessExpiresAtMillis,
-            String refreshToken,         // raw token (only shown once)
+            String refreshToken,         
             long refreshExpiresAtMillis
     ) {}
 
-    /* -------------------------
-       Register
-       ------------------------- */
-//    @Transactional
-//    public AuthResponse register(RegisterRequest req, String deviceId, String userAgent, String ipAddress) {
-//    	
-//    	if (deviceId == null || deviceId.isBlank()) {
-//    	    deviceId = "default"; // fallback для тестов/Postman
-//    	}
-//    	
-//        if (req == null) throw new IllegalArgumentException("Register request is null");
-//
-//        // require at least one identifier
-//        if ((req.email() == null || req.email().isBlank()) && (req.phone() == null || req.phone().isBlank())) {
-//            throw new IllegalArgumentException("email or phone is required");
-//        }
-//
-//        if (req.password() == null || req.password().length() < 6) {
-//            throw new IllegalArgumentException("password must be at least 6 characters");
-//        }
-//        
-//        //добавил нормализацию при проверке
-//
-//        if (req.email() != null && !req.email().isBlank() && userAccountRepository.existsByEmail(normalize(req.email()))) {
-//            throw new IllegalArgumentException("email already in use");
-//        }
-//        if (req.phone() != null && !req.phone().isBlank() && userAccountRepository.existsByPhone(normalize(req.phone()))) {
-//            throw new IllegalArgumentException("phone already in use");
-//        }
-//
-//        // resolve role (default CLIENT)
-//        UserAccount.Role role = UserAccount.Role.CLIENT;
-//
-//        // resolve branch if provided (left null for now)
-//        // Branch branch = ...; (if required)
-//        // we'll keep branch null for new registrations
-//        // build and save user
-//        UserAccount user = UserAccount.builder()
-//                .email(normalize(req.email()))
-//                .phone(normalize(req.phone()))
-//                .passwordHash(passwordEncoder.encode(req.password()))
-//                .role(role)
-//                .status(UserAccount.Status.ACTIVE)
-//                .branch(null)
-//                .build();
-//
-//        user = userAccountRepository.save(user);
-//
-//        log.info("AuthService: registered user id={} email={} phone={}", user.getId(), user.getEmail(), user.getPhone());
-//
-//        // create refresh token (stored hashed in DB) — returns raw token to client
-//        RefreshTokenService.RefreshTokenCreateResult refreshResult =
-//                refreshTokenService.createRefreshToken(user.getId(), deviceId, userAgent, ipAddress);
-//
-//        // generate access token
-//        Long branchIdForToken = null; // branch is null on register
-//        String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name(), branchIdForToken);
-//        long accessExpiresAt = jwtTokenExpiryMillis(accessToken);
-//
-//        return new AuthResponse(
-//                accessToken,
-//                accessExpiresAt,
-//                refreshResult.getRawToken(),
-//                refreshResult.getExpiresAtMillis()
-//        );
-//    }
-
-    /* -------------------------
-       Login
-       ------------------------- */
     @Transactional
     public AuthResponse login(LoginRequest req, String deviceId, String userAgent, String ipAddress) {
     	
     	
-    	//ПОМЕНЯЛ, БЫЛО - ДЭФОЛТ, НО ТАК НЕОЧЕНЬ
     	if (deviceId == null || deviceId.isBlank()) {
-    		//deviceId = "default";
     	    throw new BadCredentialsException("DeviceId required");
     	}
     	
@@ -177,11 +87,9 @@ public class AuthService {
             throw new BadCredentialsException("Bad credentials");
         }
 
-        // create refresh token for this session/device
         RefreshTokenService.RefreshTokenCreateResult refreshResult =
                 refreshTokenService.createRefreshToken(user.getId(), deviceId, userAgent, ipAddress);
 
-        // obtain branchId safely (repository method returns Optional<Long>)
         Long branchId = userAccountRepository.findBranchIdByUserId(user.getId()).orElse(null);
 
         String accessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name(), branchId);
@@ -197,15 +105,10 @@ public class AuthService {
         );
     }
 
-    /* -------------------------
-       Refresh (rotate + new access token)
-       ------------------------- */
     @Transactional
     public AuthResponse refresh(String oldRefreshTokenRaw, String deviceId, String userAgent, String ipAddress) {
     	
-    	//ПОМЕНЯЛ, БЫЛО - ДЭФОЛТ, НО ТАК НЕОЧЕНЬ
     	if (deviceId == null || deviceId.isBlank()) {
-    		//deviceId = "default";
     	    throw new BadCredentialsException("DeviceId required");
     	}
     	
@@ -213,10 +116,8 @@ public class AuthService {
             throw new BadCredentialsException("Invalid refresh token");
         }
 
-        // First, check token validity (existence, not revoked, not expired, user status)
         Optional<RefreshToken> tokenOpt = refreshTokenService.findValidByRawToken(oldRefreshTokenRaw);
         if (tokenOpt.isEmpty()) {
-            // invalid token or reuse/expired/blocked
             throw new BadCredentialsException("Invalid refresh token");
         }
 
@@ -230,22 +131,18 @@ public class AuthService {
         }
         
         
-        //ДОБАВИЛ ДЛЯ ИЗБЕЖАНИЯ КРАЖ
         if (!Objects.equals(token.getDeviceId(), deviceId)) {
             throw new BadCredentialsException("Device mismatch");
         }
 
-        // Rotate: this will revoke the old one and create+persist a new refresh token (with reuse detection inside)
         RefreshTokenService.RefreshTokenCreateResult newRefresh;
         try {
             newRefresh = refreshTokenService.rotateRefreshToken(oldRefreshTokenRaw, deviceId, userAgent, ipAddress);
         } catch (IllegalStateException ex) {
-            // rotation detected reuse or other critical condition; propagate as auth failure
             log.warn("Refresh rotation failed for userId={} : {}", user.getId(), ex.getMessage());
             throw new BadCredentialsException("Invalid refresh token");
         }
 
-        // Generate new access token
         Long branchId = userAccountRepository.findBranchIdByUserId(user.getId()).orElse(null);
         String newAccessToken = jwtService.generateAccessToken(user.getId(), user.getRole().name(), branchId);
         long accessExpiresAt = jwtTokenExpiryMillis(newAccessToken);
@@ -260,12 +157,8 @@ public class AuthService {
         );
     }
 
-    /* -------------------------
-       Logout / revoke
-       ------------------------- */
     @Transactional
     public void logoutAllSessions(Long userId, String deviceId) {
-        // revoke all refresh tokens for user (REQUIRES_NEW ensures commit in RefreshTokenService)
     	
     	Optional<UserAccount> opt = userAccountRepository.findById(userId);
     	UserAccount user = opt.orElseThrow(() -> new BadCredentialsException("User not found"));
@@ -284,10 +177,6 @@ public class AuthService {
         }
         return revoked;
     }
-
-    /* -------------------------
-       Helper
-       ------------------------- */
 
     private long jwtTokenExpiryMillis(String token) {
         if (token == null) return 0L;

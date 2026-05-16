@@ -2,6 +2,7 @@ package com.system.support.service;
 
 import com.system.support.dto.*;
 import com.system.support.entity.*;
+import com.system.support.kafka.StatsEventProducer;
 import com.system.support.repository.*;
 
 import lombok.RequiredArgsConstructor;
@@ -13,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +25,7 @@ public class SupportService {
 
     private final SupportRequestRepository supportRequestRepository;
     private final ProblemItemRepository problemItemRepository;
+    private final OutboxService outboxService;
 
     @Transactional
     public SupportRequest createSupportRequest(CreateSupportRequestDto dto, Long branchId, Long supportId) {
@@ -42,6 +46,8 @@ public class SupportService {
                 .orderId(dto.getOrderId())
                 .masterId(dto.getMasterId())
                 .description(dto.getDescription())
+                .deviceSerial(dto.getDeviceSerial())   
+                .deviceModel(dto.getDeviceModel())      
                 .clientId(dto.getClientId())
                 .status(SupportRequestStatus.CREATED)
                 .build();
@@ -100,8 +106,21 @@ public class SupportService {
 
         request.setStatus(SupportRequestStatus.RETURNED);
         request.setCompletedAt(Instant.now());
+        
+        SupportRequest saved = supportRequestRepository.save(request);
+        
+        outboxService.saveEvent(OperationEventDTO.builder()
+                .eventId(UUID.randomUUID())
+                .type(OperationEventDTO.OperationType.REFUND)
+                .eventTime(LocalDateTime.now())
+                .branchId(saved.getBranchId())
+                .masterId(saved.getMasterId())
+                .supportId(saved.getSupportId())
+                .orderId(saved.getOrderId())
+                .clientAmount(saved.getRefundCost())
+                .build());
 
-        return supportRequestRepository.save(request);
+        return saved;
     }
     
     @Transactional
@@ -125,6 +144,10 @@ public class SupportService {
 
         SupportRequest request = supportRequestRepository.findById(supportRequestId)
                 .orElseThrow();
+        
+        if (request.getStatus() == SupportRequestStatus.WARRANTY_REPAIR_IN_PROGRESS) {
+            return request;
+        }
 
         if (request.getStatus() != SupportRequestStatus.WARRANTY_REPAIR_REQUIRED) {
             throw new IllegalStateException("Invalid status");
@@ -160,6 +183,10 @@ public class SupportService {
 
         SupportRequest request = supportRequestRepository.findById(supportRequestId)
                 .orElseThrow();
+        
+        if (request.getStatus() == SupportRequestStatus.WARRANTY_REPAIR_COMPLETED) {
+            return request;
+        }
 
         BigDecimal masterCost = BigDecimal.ZERO;
         BigDecimal cost = BigDecimal.ZERO;
@@ -184,6 +211,20 @@ public class SupportService {
         request.setCost(cost);
         request.setStatus(SupportRequestStatus.WARRANTY_REPAIR_COMPLETED);
         request.setCompletedAt(Instant.now());
+        
+        SupportRequest saved = supportRequestRepository.save(request);
+        
+        outboxService.saveEvent(OperationEventDTO.builder()
+                .eventId(UUID.randomUUID())
+                .type(OperationEventDTO.OperationType.WARRANTY_COMPLETED)
+                .eventTime(LocalDateTime.now())
+                .branchId(saved.getBranchId())
+                .masterId(masterId)
+                .supportId(saved.getSupportId())
+                .orderId(saved.getOrderId())
+                .costPrice(saved.getCost())
+                .masterAmount(saved.getMasterCost())
+                .build());
 
         return supportRequestRepository.save(request);
     }
@@ -238,6 +279,8 @@ public class SupportService {
                 .status(request.getStatus())
                 .orderId(request.getOrderId())
                 .description(request.getDescription())
+                .deviceSerial(request.getDeviceSerial())   
+                .deviceModel(request.getDeviceModel())      
                 .refundCost(request.getRefundCost())
                 .createdAt(request.getCreatedAt())
                 .completedAt(request.getCompletedAt())
@@ -261,5 +304,4 @@ public class SupportService {
                 .createdAt(item.getCreatedAt())
                 .build();
     }
-    
 }

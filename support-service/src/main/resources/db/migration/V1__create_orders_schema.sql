@@ -1,7 +1,3 @@
--- =========================================
--- SUPPORT REQUESTS TABLE
--- =========================================
-
 CREATE TABLE support_requests (
     id BIGSERIAL PRIMARY KEY,
 
@@ -14,6 +10,8 @@ CREATE TABLE support_requests (
     completed_by_master_id BIGINT,
 
     description TEXT,
+    device_serial VARCHAR(100),       
+    device_model  VARCHAR(255),       
 
     status VARCHAR(50) NOT NULL,
 
@@ -34,11 +32,6 @@ CREATE INDEX idx_support_requests_order_id
 CREATE INDEX idx_support_requests_master_id
     ON support_requests (master_id);
 
-
-
--- =========================================
--- PROBLEM ITEMS TABLE
--- =========================================
 
 CREATE TABLE problem_items (
     id BIGSERIAL PRIMARY KEY,
@@ -65,3 +58,22 @@ CREATE TABLE problem_items (
 
 CREATE INDEX idx_problem_items_support_request
     ON problem_items (support_request_id);
+    
+    
+
+CREATE TABLE outbox_event (
+    id BIGSERIAL PRIMARY KEY,
+
+    event_id UUID NOT NULL UNIQUE,
+    event_type VARCHAR(50) NOT NULL,
+
+    payload TEXT NOT NULL,
+
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed BOOLEAN NOT NULL DEFAULT FALSE,
+    processed_at TIMESTAMP,
+
+    retry_count INT DEFAULT 0
+);
+
+CREATE INDEX idx_outbox_processed ON outbox_event(processed);

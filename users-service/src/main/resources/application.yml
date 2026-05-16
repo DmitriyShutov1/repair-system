@@ -3,6 +3,8 @@ server:
   address: 0.0.0.0 
 
 spring:
+  application:
+    name: users
   datasource:
     url: jdbc:postgresql://postgres:5432/users_db
     username: users_user
@@ -42,6 +44,27 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+resilience4j:
+
+  retry:
+    instances:
+      warehouseRetry:
+        max-attempts: 3
+        wait-duration: 500ms
+        retry-exceptions:
+          - java.io.IOException
+          - org.springframework.web.client.HttpServerErrorException
+          - org.springframework.web.client.ResourceAccessException
+
+  circuitbreaker:
+    instances:
+      warehouseCircuit:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
 
 security:
   jwt:
@@ -90,11 +113,13 @@ security:
     access-token-expiration-ms: 10000
     refresh-token-expiration-ms: 259200000
     refresh-token-hmac-secret: "a8xK9pL2qR5vN7mB4cW1xY6zS8dF9gH2jK4lZ7xP3qR5tV8nB1mC4wX7yZ0aF3dG6hJ9kL2n"
-#
-#logging:
-#  level:
-#    org.springframework.transaction: TRACE
-##    org.springframework: DEBUG
-#    org.hibernate.engine.transaction.internal.TransactionImpl: DEBUG
-#    org.flywaydb: DEBUG
-#    org.springframework.mail: DEBUG
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0   
+    propagation:
+      type: W3C
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans 

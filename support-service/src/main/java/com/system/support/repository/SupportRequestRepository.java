@@ -11,19 +11,16 @@ import java.util.List;
 
 public interface SupportRequestRepository extends JpaRepository<SupportRequest, Long> {
 
-    // список обращений по заказу
     List<SupportRequest> findByOrderId(Long orderId);
     
     List<SupportRequest> findByOrderIdAndStatusNotIn(Long orderId, List<SupportRequestStatus> statuses);
 
-    // страница обращений по supportId и статусу
     Page<SupportRequest> findBySupportIdAndStatus(
             Long supportId,
             SupportRequestStatus status,
             Pageable pageable
     );
     
- // страница обращений по supportId и статусу
     Page<SupportRequest> findByBranchIdAndStatus(
             Long branchId,
             SupportRequestStatus status,

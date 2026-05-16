@@ -22,6 +22,7 @@ public class Order {
         WAITING_FOR_PARTS,
         WAITING_FOR_APPROVAL,
         IN_PROGRESS,
+        TESTING,
         COMPLETED,
         CANCELLED_BY_CLIENT,
         CANCELLED_BY_MASTER,
@@ -41,6 +42,12 @@ public class Order {
     
     @Column(name = "branch_id")
     private Long branchId;
+    
+    @Column(name = "device_serial", length = 100)    
+    private String deviceSerial;
+
+    @Column(name = "device_model", length = 255)     
+    private String deviceModel;
 
     @Column(name = "warranty_id")
     private Long warrantyId;

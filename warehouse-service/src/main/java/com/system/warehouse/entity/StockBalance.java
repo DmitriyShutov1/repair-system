@@ -31,10 +31,6 @@ public class StockBalance {
             foreignKey = @ForeignKey(name = "fk_stock_part"))
     private Part part;
 
-    /**
-     * branch — это ID внешнего сервиса.
-     * Нам не нужна связь @ManyToOne!
-     */
     @Column(name = "branch_id", nullable = false)
     private Long branchId;
 

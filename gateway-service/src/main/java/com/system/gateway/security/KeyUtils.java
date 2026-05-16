@@ -21,7 +21,7 @@ public final class KeyUtils {
             X509EncodedKeySpec keySpec = new X509EncodedKeySpec(decoded);
             KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
-            return (RSAPublicKey) keyFactory.generatePublic(keySpec); // ← ВАЖНО
+            return (RSAPublicKey) keyFactory.generatePublic(keySpec); 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse RSA public key", e);
         }

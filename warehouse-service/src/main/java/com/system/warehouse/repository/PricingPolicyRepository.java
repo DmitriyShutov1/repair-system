@@ -19,21 +19,9 @@ import lombok.RequiredArgsConstructor;
 @Repository
 public interface PricingPolicyRepository extends JpaRepository<PricingPolicy, Long> {
 
-    /* =======================
-       SEARCH BY PART
-       ======================= */
-
     Page<PricingPolicy> findAllByPartId(Long partId, Pageable pageable);
 
-    /* =======================
-       SEARCH BY SERVICE
-       ======================= */
-
     Page<PricingPolicy> findAllByServiceId(Long serviceId, Pageable pageable);
-
-    /* =======================
-       CURRENT ACTIVE POLICY
-       ======================= */
 
     @Query("""
            SELECT p
@@ -50,10 +38,6 @@ public interface PricingPolicyRepository extends JpaRepository<PricingPolicy, Lo
              AND p.effectiveTo IS NULL
            """)
     Optional<PricingPolicy> findActiveByServiceId(@Param("serviceId") Long serviceId);
-
-    /* =======================
-       HISTORY LOOKUP
-       ======================= */
 
     @Query("""
            SELECT p

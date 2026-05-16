@@ -36,7 +36,11 @@ public class OrderResponse {
 
     private Status status;
 
-    private String diagnosticResult;
+    private String diagnosticResult; 
+    
+    private String deviceSerial;
+    
+    private String deviceModel;
 
     private Boolean clientApproved;
 

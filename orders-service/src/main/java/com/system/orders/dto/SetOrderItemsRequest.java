@@ -4,19 +4,6 @@ import lombok.*;
 
 import java.util.List;
 
-//@Data
-//@NoArgsConstructor
-//@AllArgsConstructor
-//@Builder
-//public class SetOrderItemsRequest {
-//
-//    private Long orderId;
-//    
-//    private Long branchId;
-//    
-//    private List<OrderItemRequest> items;
-//}
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

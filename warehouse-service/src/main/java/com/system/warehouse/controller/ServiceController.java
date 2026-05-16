@@ -21,10 +21,6 @@ public class ServiceController {
 
     private final ServiceService serviceService;
 
-    // =========================================================
-    // CREATE
-    // =========================================================
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ServiceResponse create(
@@ -35,10 +31,6 @@ public class ServiceController {
     	    throw new IllegalStateException("You are not admin");
         return serviceService.create(request);
     }
-
-    // =========================================================
-    // UPDATE
-    // =========================================================
 
     @PutMapping("/{id}")
     public ServiceResponse update(
@@ -51,25 +43,16 @@ public class ServiceController {
         return serviceService.update(id, request);
     }
 
-    // =========================================================
-    // SOFT DELETE
-    // =========================================================
-
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(
             @RequestHeader("X-User-Role") String role,
             @PathVariable Long id
     ) {
-    	if(role != "ADMIN") {
-    		throw new IllegalStateException("You are not admin");
-    	}
+    	if (!"ADMIN".equals(role)) 
+    	    throw new IllegalStateException("You are not admin");
         serviceService.delete(id);
     }
-
-    // =========================================================
-    // FIND BY ID
-    // =========================================================
 
     @GetMapping("/{id}")
     public ServiceResponse findById(
@@ -81,10 +64,6 @@ public class ServiceController {
         return serviceService.findById(id);
     }
 
-    // =========================================================
-    // FIND BY SERVICE CODE
-    // =========================================================
-
     @GetMapping("/by-code")
     public ServiceResponse findByServiceCode(
             @RequestHeader("X-User-Role") String role,
@@ -94,10 +73,6 @@ public class ServiceController {
     	    throw new IllegalStateException("You are not client");
         return serviceService.findByServiceCode(serviceCode);
     }
-
-    // =========================================================
-    // FIND BY CATEGORY (ACTIVE ONLY)
-    // =========================================================
 
     @GetMapping("/by-category")
     public Page<ServiceResponse> findByCategory(
@@ -111,10 +86,6 @@ public class ServiceController {
         return serviceService.findByCategory(category, pageable, active);
     }
 
-    // =========================================================
-    // SEARCH BY NAME
-    // =========================================================
-
     @GetMapping("/search")
     public Page<ServiceResponse> search(
             @RequestHeader("X-User-Role") String role,
@@ -125,10 +96,6 @@ public class ServiceController {
     	    throw new IllegalStateException("You are not client");
         return serviceService.searchByName(query, pageable);
     }
-    
- // =========================================================
- // SEARCH WITH PRICE
- // =========================================================
 
 	 @GetMapping("/search-with-price")
 	 public Page<ServiceWithPriceDto> searchWithPrice(
@@ -141,11 +108,6 @@ public class ServiceController {
 	    	    throw new IllegalStateException("You are not client");
 	     return serviceService.searchWithPriceByName(query, active, pageable);
 	 }
-    
-	 
-	// =========================================================
-	// FIND BY CATEGORY WITH PRICE
-	// =========================================================
 
 	@GetMapping("/by-category-with-price")
 	public Page<ServiceWithPriceDto> findByCategoryWithPrice(
@@ -169,10 +131,6 @@ public class ServiceController {
     	    throw new IllegalStateException("You are not client");
 	    return serviceService.findServicesWithoutActivePrice(pageable);
 	}
-	
-	// =========================================================
-	// FIND BY SERVICE CODE WITH PRICE
-	// =========================================================
 
 	@GetMapping("/by-code-with-price")
 	public ServiceWithPriceDto findByCodeWithPrice(

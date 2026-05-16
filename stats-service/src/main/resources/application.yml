@@ -1,0 +1,55 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: stats
+  datasource:
+    url: jdbc:postgresql://stats-postgres:5432/stats_db
+    username: stats_user
+    password: 123456
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        naming:
+                physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: kafka:9092
+    consumer:
+      group-id: stats-group
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+    listener:
+        ack-mode: manual
+
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+management:
+  tracing:
+    sampling:
+      probability: 1.0   
+    propagation:
+      type: W3C
+
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans 
+
+logging:
+  pattern:
+    level: "%5p [${spring.application.name},traceId=%X{traceId},spanId=%X{spanId}]"

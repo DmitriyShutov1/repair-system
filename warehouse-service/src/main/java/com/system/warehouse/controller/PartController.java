@@ -25,10 +25,6 @@ public class PartController {
     private final PartService partService;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    // =========================================================
-    // CREATE
-    // =========================================================
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PartResponse create(
@@ -41,10 +37,6 @@ public class PartController {
         return partService.create(request);
     }
 
-    // =========================================================
-    // UPDATE
-    // =========================================================
-
     @PutMapping("/{id}")
     public PartResponse update(
             @RequestHeader("X-User-Role") String role,
@@ -56,9 +48,6 @@ public class PartController {
         return partService.update(id, request);
     }
 
-    // =========================================================
-    // SOFT DELETE
-    // =========================================================
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -71,10 +60,6 @@ public class PartController {
         partService.delete(id);
     }
 
-    // =========================================================
-    // FIND BY ID
-    // =========================================================
-
     @GetMapping("/{id}")
     public PartResponse findById(
             @RequestHeader("X-User-Role") String role,
@@ -85,10 +70,6 @@ public class PartController {
         return partService.findById(id);
     }
 
-    // =========================================================
-    // FIND BY ARTICLE NUMBER
-    // =========================================================
-
     @GetMapping("/by-article")
     public PartResponse findByArticleNumber(
             @RequestHeader("X-User-Role") String role,
@@ -98,10 +79,6 @@ public class PartController {
     	    throw new IllegalStateException("You are client");
         return partService.findByArticleNumber(articleNumber);
     }
-
-    // =========================================================
-    // FIND BY CATEGORY (ACTIVE ONLY)
-    // =========================================================
 
     @GetMapping("/by-category")
     public Page<PartResponse> findByCategory(
@@ -114,10 +91,6 @@ public class PartController {
     	    throw new IllegalStateException("You are client");
         return partService.findByCategory(category, pageable, active);
     }
-
-    // =========================================================
-    // SEARCH BY NAME
-    // =========================================================
 
     @GetMapping("/search")
     public Page<PartResponse> search(

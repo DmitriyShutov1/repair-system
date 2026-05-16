@@ -85,11 +85,7 @@ public class BranchService {
         if (force) {
             users.forEach(user -> user.setBranch(null));
         }
-        
-        branchRepository.delete(branch);
-        
-        
         client.deleteAllStockByBranch(id);
-        
+        branchRepository.delete(branch);  
     }
 }

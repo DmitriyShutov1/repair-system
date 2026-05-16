@@ -1,11 +1,4 @@
--- ======================================
--- EXTENSIONS
--- ======================================
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
--- ======================================
--- ENUM TYPES
--- ======================================
 
 CREATE TYPE part_category_enum AS ENUM (
     'SCREEN',
@@ -36,10 +29,6 @@ CREATE TYPE movement_type_enum AS ENUM (
     'RETURN'
 );
 
--- ======================================
--- LAPTOP MODEL
--- ======================================
-
 CREATE TABLE laptop_model (
     id                  BIGSERIAL PRIMARY KEY,
     brand               VARCHAR(100) NOT NULL,
@@ -53,36 +42,25 @@ CREATE TABLE laptop_model (
 
 CREATE INDEX idx_laptop_brand ON laptop_model(brand);
 
--- ======================================
--- PART
--- ======================================
-
 CREATE TABLE part (
     id              BIGSERIAL PRIMARY KEY,
     name            VARCHAR(200) NOT NULL,
     article_number  VARCHAR(100) NOT NULL UNIQUE,
     category        VARCHAR(100) NOT NULL,
---    category        part_category_enum NOT NULL,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     version         BIGINT NOT NULL DEFAULT 0
 );
 
 CREATE INDEX idx_part_category ON part(category);
 
--- trigram index for fast search
 CREATE INDEX idx_part_name_trgm
     ON part USING GIN (name gin_trgm_ops);
-
--- ======================================
--- SERVICE
--- ======================================
 
 CREATE TABLE service (
     id              BIGSERIAL PRIMARY KEY,
     name            VARCHAR(200) NOT NULL,
     service_code    VARCHAR(100) NOT NULL UNIQUE,
     category        VARCHAR(100) NOT NULL,
---    category        service_category_enum NOT NULL,
     is_active       BOOLEAN NOT NULL DEFAULT TRUE,
     version         BIGINT NOT NULL DEFAULT 0
 );
@@ -92,25 +70,6 @@ CREATE INDEX idx_service_category ON service(category);
 CREATE INDEX idx_service_name_trgm
     ON service USING GIN (name gin_trgm_ops);
 
--- ======================================
--- LAPTOP-PART COMPATIBILITY (M:N)
--- ======================================
-
---CREATE TABLE laptop_model_part (
---    laptop_model_id BIGINT NOT NULL,
---    part_id         BIGINT NOT NULL,
---    PRIMARY KEY (laptop_model_id, part_id),
---    CONSTRAINT fk_cmp_laptop
---        FOREIGN KEY (laptop_model_id)
---        REFERENCES laptop_model(id)
---        ON DELETE CASCADE,
---    CONSTRAINT fk_cmp_part
---        FOREIGN KEY (part_id)
---        REFERENCES part(id)
---        ON DELETE CASCADE
---);
---
---CREATE INDEX idx_cmp_part ON laptop_model_part(part_id);
 
 CREATE TABLE laptop_model_part (
     id              BIGSERIAL PRIMARY KEY,
@@ -133,24 +92,6 @@ CREATE TABLE laptop_model_part (
 CREATE INDEX idx_cmp_part ON laptop_model_part(part_id);
 CREATE INDEX idx_cmp_laptop ON laptop_model_part(laptop_model_id);
 
--- ======================================
--- STOCK BALANCE (BY BRANCH)
--- ======================================
-
---CREATE TABLE stock_balance (
---    part_id     BIGINT NOT NULL,
---    branch_id   BIGINT NOT NULL,
---    quantity    INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
---    version     BIGINT NOT NULL DEFAULT 0,
---    PRIMARY KEY (part_id, branch_id),
---    CONSTRAINT fk_stock_part
---        FOREIGN KEY (part_id)
---        REFERENCES part(id)
---        ON DELETE CASCADE
---);
---
---CREATE INDEX idx_stock_branch ON stock_balance(branch_id);
-
 CREATE TABLE stock_balance (
     id          BIGSERIAL PRIMARY KEY,
     part_id     BIGINT NOT NULL,
@@ -168,10 +109,6 @@ CREATE TABLE stock_balance (
 
 CREATE INDEX idx_stock_branch ON stock_balance(branch_id);
 CREATE INDEX idx_stock_part ON stock_balance(part_id);
-
--- ======================================
--- PRICING POLICY (VERSIONED)
--- ======================================
 
 CREATE TABLE pricing_policy (
     id                  BIGSERIAL PRIMARY KEY,
@@ -201,18 +138,12 @@ CREATE INDEX idx_price_part ON pricing_policy(part_id);
 CREATE INDEX idx_price_service ON pricing_policy(service_id);
 CREATE INDEX idx_price_effective ON pricing_policy(effective_from, effective_to);
 CREATE INDEX idx_price_active_part ON pricing_policy(part_id) WHERE effective_to IS NULL;
---CREATE UNIQUE INDEX uq_active_price_part ON pricing_policy(part_id) WHERE effective_to IS NULL;
-
--- ======================================
--- STOCK MOVEMENT (AUDIT)
--- ======================================
 
 CREATE TABLE stock_movement (
     id              BIGSERIAL PRIMARY KEY,
     part_id         BIGINT NOT NULL,
     branch_id       BIGINT NOT NULL,
     master_id       BIGINT NOT NULL,
---    movement_type   movement_type_enum NOT NULL,
 	movement_type   VARCHAR(55) NOT NULL,
     reason          VARCHAR(255),
     quantity        INTEGER NOT NULL CHECK (quantity > 0),
@@ -228,9 +159,6 @@ CREATE INDEX idx_movement_branch ON stock_movement(branch_id);
 CREATE INDEX idx_movement_order ON stock_movement(order_id);
 CREATE INDEX idx_movement_created ON stock_movement(created_at);
 
--- ======================================
--- PART WAITING LIST
--- ======================================
 
 CREATE TABLE part_waiting_list (
     id                  BIGSERIAL PRIMARY KEY,

@@ -21,6 +21,8 @@ public class OrderDetailsDto {
     
     private Long warrantyId;
     private String status;
+    private String deviceSerial; 
+    private String deviceModel; 
     private String diagnosticResult;
     
     private Instant createdAt;

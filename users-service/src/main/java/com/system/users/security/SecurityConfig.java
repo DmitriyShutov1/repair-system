@@ -23,19 +23,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            // JWT → CSRF не нужен
             .csrf(csrf -> csrf.disable())
 
-            // Никаких сессий
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-            // Убираем request cache (он для form login)
             .requestCache(cache -> cache.requestCache(new NullRequestCache()))
 
-            // Отключаем logout полностью
             .logout(logout -> logout.disable())
 
-            // Чтобы Spring не возвращал HTML при 401
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((req, res, e) -> {
                     res.setStatus(HttpStatus.UNAUTHORIZED.value());
@@ -46,7 +41,6 @@ public class SecurityConfig {
 
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
 
-            // Наш JWT фильтр
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

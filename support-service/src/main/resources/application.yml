@@ -3,6 +3,8 @@ server:
   address: 0.0.0.0 
 
 spring:
+  application:
+    name: support
   datasource:
     url: jdbc:postgresql://support-postgres:5432/support_db
     username: support_user
@@ -18,10 +20,19 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
-#
-#services:
-#  warehouse:
-#    url: http://warehouse-service:8082
-#  users:
-#    url: http://users-service:8081
+management:
+  tracing:
+    sampling:
+      probability: 1.0
+    propagation:
+      type: W3C
+
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans

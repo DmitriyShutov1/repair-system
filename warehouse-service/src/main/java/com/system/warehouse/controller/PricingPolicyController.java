@@ -21,10 +21,6 @@ public class PricingPolicyController {
 
     private final PricingPolicyService pricingPolicyService;
 
-    // =========================================================
-    // UPSERT (создание новой версии цены)
-    // =========================================================
-
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public PricingPolicyResponse upsert(
@@ -35,10 +31,6 @@ public class PricingPolicyController {
     	    throw new IllegalStateException("You are not admin");
         return pricingPolicyService.upsert(request);
     }
-
-    // =========================================================
-    // CLOSE CURRENT POLICY (PART)
-    // =========================================================
 
     @DeleteMapping("/part/{partId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -51,10 +43,6 @@ public class PricingPolicyController {
         pricingPolicyService.closeCurrentPolicyForPart(partId);
     }
 
-    // =========================================================
-    // CLOSE CURRENT POLICY (SERVICE)
-    // =========================================================
-
     @DeleteMapping("/service/{serviceId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void closeForService(
@@ -65,10 +53,6 @@ public class PricingPolicyController {
     	    throw new IllegalStateException("You are not admin");
         pricingPolicyService.closeCurrentPolicyForService(serviceId);
     }
-
-    // =========================================================
-    // HISTORY BY PART
-    // =========================================================
 
     @GetMapping("/part/{partId}")
     public Page<PricingPolicyResponse> findAllByPart(
@@ -81,10 +65,6 @@ public class PricingPolicyController {
         return pricingPolicyService.findAllByPartId(partId, pageable);
     }
 
-    // =========================================================
-    // HISTORY BY SERVICE
-    // =========================================================
-
     @GetMapping("/service/{serviceId}")
     public Page<PricingPolicyResponse> findAllByService(
             @RequestHeader("X-User-Role") String role,
@@ -96,10 +76,6 @@ public class PricingPolicyController {
         return pricingPolicyService.findAllByServiceId(serviceId, pageable);
     }
 
-    // =========================================================
-    // CURRENT ACTIVE (PART)
-    // =========================================================
-
     @GetMapping("/part/{partId}/active")
     public PricingPolicyResponse findActiveByPart(
             @RequestHeader("X-User-Role") String role,
@@ -110,10 +86,6 @@ public class PricingPolicyController {
         return pricingPolicyService.findActiveByPartId(partId);
     }
 
-    // =========================================================
-    // CURRENT ACTIVE (SERVICE)
-    // =========================================================
-
     @GetMapping("/service/{serviceId}/active")
     public PricingPolicyResponse findActiveByService(
             @RequestHeader("X-User-Role") String role,
@@ -123,10 +95,6 @@ public class PricingPolicyController {
     	    throw new IllegalStateException("You are not admin");
         return pricingPolicyService.findActiveByServiceId(serviceId);
     }
-
-    // =========================================================
-    // ACTUAL AT MOMENT (PART)
-    // =========================================================
 
     @GetMapping("/part/{partId}/at")
     public PricingPolicyResponse findActualAtMoment(

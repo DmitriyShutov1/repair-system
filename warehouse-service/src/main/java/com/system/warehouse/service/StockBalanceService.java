@@ -1,6 +1,7 @@
 package com.system.warehouse.service;
 
 import com.system.warehouse.client.OrdersClient;
+import com.system.warehouse.dto.OperationEventDTO;
 import com.system.warehouse.dto.PartResponse;
 import com.system.warehouse.dto.PartWithPriceAndStockDto;
 import com.system.warehouse.entity.*;
@@ -9,10 +10,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +26,9 @@ public class StockBalanceService {
     private final PartRepository partRepository; 
     private final PartWaitingListRepository waitingListRepository;
     private final StockMovementRepository movementRepository;
+    private final PricingPolicyRepository priceRepository;
     private final OrdersClient ordersClient;
+    private final OutboxService outboxService;
     
     @Transactional
     public StockBalance createStock(Long partId, Long branchId, Integer initialQuantity) {
@@ -37,47 +44,8 @@ public class StockBalanceService {
         return repository.save(stock);
     }
     
-//    
-//    @Transactional
-//    public void increaseQuantity(Long partId, Long branchId, Integer amount) {
-//    	
-//    	Optional<StockBalance> stock1 = repository.findByPartIdAndBranchId(partId, branchId);
-//        StockBalance stock = stock1.get();
-//        stock.setQuantity(stock.getQuantity() + amount);
-//    }
-    
-//    @Transactional
-//    public void increaseQuantity(Long partId, Long branchId, Integer amount) {
-//    	
-//    	Optional<StockBalance> stockOpt = repository.findByPartIdAndBranchId(partId, branchId);
-//    	
-//    	if (stockOpt.isPresent()) {
-//    	    // Запись есть - увеличиваем
-//    	    StockBalance stock = stockOpt.get();
-//    	    stock.setQuantity(stock.getQuantity() + amount);
-//    	} else {
-//    	    // Записи нет - создаем новую с amount как начальное количество
-//    	    createStock(partId, branchId, amount);
-//    	}
-//    }
-//    
-//    @Transactional
-//    public void decreaseQuantity(Long partId, Long branchId, Integer amount) {
-//        Optional<StockBalance> stock1 = repository.findByPartIdAndBranchId(partId, branchId);
-//        StockBalance stock = stock1.get();
-//        
-//        if (stock.getQuantity() < amount) {
-//            throw new RuntimeException(
-//                String.format("Insufficient stock. Available: %d, requested: %d", 
-//                    stock.getQuantity(), amount)
-//            );
-//        }
-//        
-//        stock.setQuantity(stock.getQuantity() - amount);
-//    }
-//    
     @Transactional
-    public void deleteAllByBranch(Long branchId, Long userId) {
+    public void deleteAllByBranch(Long branchId) {
         repository.deleteAllByBranchId(branchId);
         //удаление всей истории аудита для бранча
     }
@@ -93,6 +61,12 @@ public class StockBalanceService {
     	
     	Part part = partRepository.findByArticleNumber(articleNumber)
     	        .orElseThrow(() -> new RuntimeException("Part not found with article: " + articleNumber));
+    	
+    	PricingPolicy forKafka = priceRepository.findActiveByPartId(part.getId()).orElseThrow(() -> new RuntimeException("Price for part not found"));
+    	
+    	BigDecimal purchaseAmount =
+    			forKafka.getCostPrice()
+    	                .multiply(BigDecimal.valueOf(receivedQuantity));
     	
     	Long partId = part.getId();
         
@@ -131,9 +105,20 @@ public class StockBalanceService {
                         .orderId(entry.getOrderId())
                         .build();
                 movementRepository.save(movement);
+                
+                StockMovement outMovement = StockMovement.builder()
+                        .part(part)
+                        .branchId(branchId)
+                        .masterId(userId)
+                        .movementType(MovementType.OUT_TO_ORDER)
+                        .reason("Списание из листа ожидания")
+                        .quantity(requiredQuantity)
+                        .orderId(entry.getOrderId())
+                        .build();
+                movementRepository.save(outMovement);
+                
                 remainingQuantity -= requiredQuantity;
                 
-                // Проверяем, остались ли еще детали для этого заказа
                 Integer stillNeeded = waitingListRepository
                     .sumRequiredQuantityByOrderId(orderId);
                 
@@ -141,7 +126,7 @@ public class StockBalanceService {
                     System.out.println("Заказ " + orderId + " полностью обеспечен деталями");
                     
                     readyOrders.add(orderId);
-                    // TODO: здесь будет вызов в сервис заказов
+                    
                     
                     
                 } else {
@@ -149,7 +134,6 @@ public class StockBalanceService {
                 }
                 
             } else {
-                // Частично покрываем запрос
                 entry.setRequiredQuantity(requiredQuantity - remainingQuantity);
                 
                 StockMovement movement = StockMovement.builder()
@@ -162,14 +146,24 @@ public class StockBalanceService {
                         .orderId(entry.getOrderId())
                         .build();
                 movementRepository.save(movement);
+                
+                StockMovement outMovement = StockMovement.builder()
+                        .part(part)
+                        .branchId(branchId)
+                        .masterId(userId)
+                        .movementType(MovementType.OUT_TO_ORDER)
+                        .reason("Списание из листа ожидания")
+                        .quantity(remainingQuantity)
+                        .orderId(entry.getOrderId())
+                        .build();
+                movementRepository.save(outMovement);
+                
                 remainingQuantity = 0;
-                // Заказ все еще ждет остаток
                 System.out.println("Заказ " + orderId + " частично обеспечен, осталось " + 
                 		entry.getRequiredQuantity() + " деталей");
             }
         }
         
-        // 4. Оставшиеся детали добавляем на склад
         if (remainingQuantity > 0) {
             stock.setQuantity(stock.getQuantity() + remainingQuantity);
             System.out.println("Остаток " + remainingQuantity + " деталей добавлен на склад");
@@ -188,6 +182,26 @@ public class StockBalanceService {
                 if (!readyOrders.isEmpty()) {
             ordersClient.notifyOrdersInProgress(readyOrders);
         }
+        outboxService.save(
+                        OperationEventDTO.builder()
+                                .eventId(UUID.randomUUID())
+                                .type(OperationEventDTO.OperationType.PURCHASE)
+                                .eventTime(LocalDateTime.now())
+
+                                .branchId(branchId)
+
+                                .masterId(userId)
+                                .originalMasterId(0L)
+                                .supportId(0L)
+                                .orderId(partId)
+
+                                .costPrice(purchaseAmount)
+
+                                .clientAmount(BigDecimal.ZERO)
+                                .masterAmount(BigDecimal.ZERO)
+
+                                .build()
+                );
     }
     
 
@@ -195,12 +209,13 @@ public class StockBalanceService {
     @Transactional
     public void cancelOrder(Long orderId, Long branchId, List<PartWithPriceAndStockDto> items, Long masterId) {
         
-    	List<StockMovement> move = movementRepository.findByOrderIdAndMovementType(orderId, MovementType.RETURN_TO_STOCK);
-        if(!move.isEmpty()) {
-        	return;
+        List<PartWithPriceAndStockDto> itemsToProcess = filterAlreadyReturned(orderId, items);
+        
+        if (itemsToProcess.isEmpty()) {
+            return; // всё уже возвращено
         }
         
-        for (PartWithPriceAndStockDto item : items) {
+        for (PartWithPriceAndStockDto item : itemsToProcess) {
             Long partId = item.getId();
             Integer orderedQuantity = item.getQuantity();
             
@@ -218,7 +233,8 @@ public class StockBalanceService {
             }
             
             // 3. Остаток (заказано минус то что было в листе) кладем на склад
-            int remainder = orderedQuantity - waitingQuantity;
+            //int remainder = orderedQuantity - waitingQuantity;
+            int remainder = item.getQuantity();
             
             if (remainder > 0) {
                 StockBalance stock = repository.findByPartIdAndBranchId(partId, branchId)
@@ -240,13 +256,61 @@ public class StockBalanceService {
         }
     }
     
+    private List<PartWithPriceAndStockDto> filterAlreadyReturned(
+            Long orderId, List<PartWithPriceAndStockDto> items) {
+
+        List<PartWithPriceAndStockDto> result = new ArrayList<>();
+
+        for (PartWithPriceAndStockDto item : items) {
+            Long partId = item.getId();
+
+            // Сколько списано
+            Integer reserved = movementRepository
+                    .sumQuantityByOrderIdAndPartIdAndMovementType(
+                            orderId, partId, MovementType.OUT_TO_ORDER);
+
+            // Сколько уже возвращено
+            Integer alreadyReturned = movementRepository
+                    .sumQuantityByOrderIdAndPartIdAndMovementType(
+                            orderId, partId, MovementType.RETURN_TO_STOCK);
+
+            int needToReturn = reserved - alreadyReturned;
+
+            if (needToReturn <= 0) {
+                continue; // нечего возвращать
+            }
+
+            result.add(PartWithPriceAndStockDto.builder()
+                    .id(item.getId())
+                    .name(item.getName())
+                    .articleNumber(item.getArticleNumber())
+                    .category(item.getCategory())
+                    .active(item.getActive())
+                    .costPrice(item.getCostPrice())
+                    .quantity(needToReturn)
+                    .build());
+        }
+
+        return result;
+    }
+    
     
 
     @Transactional
     public boolean createOrder(Long orderId, Long branchId, List<PartWithPriceAndStockDto> items, Long masterId) {
+    	
+    	List<PartWithPriceAndStockDto> itemsToProcess = filterAlreadyReserved(orderId, items);
+
+        if (itemsToProcess.isEmpty()) {
+            // Возвращаем тот же результат что и в первый раз
+            // Проверяем, были ли waiting parts
+            boolean hasWaitingParts = waitingListRepository.existsByOrderIdAndClosedFalse(orderId);
+            return hasWaitingParts;
+        }
+    	
     	boolean waitingParts = false;
         
-        for (PartWithPriceAndStockDto item : items) {
+        for (PartWithPriceAndStockDto item : itemsToProcess) {
             Long partId = item.getId();
             Integer requestedQuantity = item.getQuantity();
             
@@ -282,28 +346,43 @@ public class StockBalanceService {
                     // Случай 2: Запчасть активна - списываем что есть, остальное в лист ожидания
                     int available = stock.getQuantity();
                     int deficit = requestedQuantity - available;
-                    
-                    StockMovement movement = StockMovement.builder()
-                            .part(part)
-                            .branchId(branchId)
-                            .masterId(masterId)
-                            .movementType(MovementType.OUT_TO_ORDER)
-                            .reason("Поступление от поставщика")
-                            .quantity(available)
-                            .orderId(orderId)
-                            .build();
-                    movementRepository.save(movement);
-                    
+             
+                    if(available > 0) {
+                    	StockMovement movement = StockMovement.builder()
+                                .part(part)
+                                .branchId(branchId)
+                                .masterId(masterId)
+                                .movementType(MovementType.OUT_TO_ORDER)
+                                .reason("в заказ")
+                                .quantity(available)
+                                .orderId(orderId)
+                                .build();
+                        movementRepository.save(movement);
+                    }
+                   
                     stock.setQuantity(0); // списываем все что есть
 
                     
-                    PartWaitingList waitingEntry = PartWaitingList.builder()
-                    	.orderId(orderId)
-                    	.part(part)
-                    	.branchId(branchId)
-                    	.requiredQuantity(deficit)
-                    	.build();
-                    waitingListRepository.save(waitingEntry);
+                    Optional<PartWaitingList> existingWaiting =
+                            waitingListRepository.findByOrderIdAndPartIdAndBranchIdAndClosedFalse(
+                                    orderId, partId, branchId);
+
+                    if (existingWaiting.isPresent()) {
+                        PartWaitingList waiting = existingWaiting.get();
+                        waiting.setRequiredQuantity(
+                                waiting.getRequiredQuantity() + deficit
+                        );
+                    } else {
+                        PartWaitingList waitingEntry = PartWaitingList.builder()
+                                .orderId(orderId)
+                                .part(part)
+                                .branchId(branchId)
+                                .requiredQuantity(deficit)
+                                .build();
+
+                        waitingListRepository.save(waitingEntry);
+                    }
+                    
                     waitingParts = true;
                 }
             } else {
@@ -312,6 +391,48 @@ public class StockBalanceService {
             
         }
         return waitingParts;
+    }
+    
+    private List<PartWithPriceAndStockDto> filterAlreadyReserved(
+            Long orderId, List<PartWithPriceAndStockDto> items) {
+
+        List<PartWithPriceAndStockDto> result = new ArrayList<>();
+
+        for (PartWithPriceAndStockDto item : items) {
+            Long partId = item.getId();
+            Integer requested = item.getQuantity();
+
+            // Сколько уже списано по этой позиции для этого заказа
+            Integer alreadyReserved = movementRepository
+                    .sumQuantityByOrderIdAndPartIdAndMovementType(
+                            orderId, partId, MovementType.OUT_TO_ORDER);
+            
+            Integer totalReturned = Optional.ofNullable(
+                    movementRepository.sumQuantityByOrderIdAndPartIdAndMovementType(
+                        orderId, partId, MovementType.RETURN_TO_STOCK)
+                ).orElse(0);
+
+            int currentlyReserved = alreadyReserved - totalReturned;
+            int needToReserve = requested - currentlyReserved;
+
+            if (needToReserve <= 0) {
+                // Уже списано достаточно — эту позицию пропускаем полностью
+                continue;
+            }
+
+            // Создаём копию позиции с уменьшенным количеством
+            result.add(PartWithPriceAndStockDto.builder()
+                    .id(item.getId())
+                    .name(item.getName())
+                    .articleNumber(item.getArticleNumber())
+                    .category(item.getCategory())
+                    .active(item.getActive())
+                    .costPrice(item.getCostPrice())
+                    .quantity(needToReserve)       // только разница
+                    .build());
+        }
+
+        return result;
     }
     
     

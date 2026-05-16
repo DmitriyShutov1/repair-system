@@ -46,9 +46,7 @@ public class StockController {
         stockService.cancelOrder(orderId, branchId, items, masterId);
     }
 
-    /**
-     * Пополнение склада
-     */
+
     @PostMapping("/receive")
     public Map<String, String> receiveParts(
     		@RequestHeader("X-Branch-Id") Long branchId,
@@ -67,14 +65,9 @@ public class StockController {
     
     @DeleteMapping("/branch/{branchId}")
     public void deleteAllByBranch(
-            @RequestHeader("X-User-Role") String role,
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long branchId
     ) {
-        if (!"ADMIN".equals(role)) {
-            throw new IllegalStateException("You are not admin");
-        }
-        stockService.deleteAllByBranch(branchId, userId);
+        stockService.deleteAllByBranch(branchId);
     }
     
     @DeleteMapping("/waitingClear/{partId}")

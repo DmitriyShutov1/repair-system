@@ -9,11 +9,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ProblemItemRepository extends JpaRepository<ProblemItem, Long> {
-
-    // все проблемные позиции для обращения
     List<ProblemItem> findBySupportRequest(SupportRequest supportRequest);
 
-    // часто удобнее искать сразу по id
     List<ProblemItem> findBySupportRequestId(Long supportRequestId);
     
 }

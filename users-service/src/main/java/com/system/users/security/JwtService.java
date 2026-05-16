@@ -34,7 +34,6 @@ public class JwtService {
         log.info("JwtService initialized with RS256. Access token ttl (ms) = {}", accessTokenExpirationMs);
     }
 
-    // ==================== TOKEN GENERATION ====================
 
     public String generateAccessToken(Long userId, String role, Long branchId) {
         Date now = new Date();
@@ -55,7 +54,6 @@ public class JwtService {
                 .compact();
     }
 
-    // ==================== PARSING ====================
 
     public Claims parseToken(String token) {
         return Jwts.parserBuilder()
@@ -87,7 +85,6 @@ public class JwtService {
         return parseToken(token).get("branchId", Long.class);
     }
 
-    // ==================== KEY LOADING ====================
 
     private PrivateKey loadPrivateKey(String pem) {
         try {

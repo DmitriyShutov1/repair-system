@@ -88,7 +88,6 @@ public class UserAccountService {
         UserAccount.Role role =
                 request.getRole() != null ? request.getRole() : UserAccount.Role.CLIENT;
         
-        //ДОБАВИЛ
         if((role == UserAccount.Role.MASTER || role == UserAccount.Role.SUPPORT) && branch == null) {
         	throw new IllegalStateException("Role needs branch definition");
         }
@@ -174,7 +173,6 @@ public class UserAccountService {
             }
         }
         
-     // Если мастер и меняем статус на BLOCKED - проверяем активные заказы
         if (user.getRole() == UserAccount.Role.MASTER && 
             request.getStatus() == UserAccount.Status.BLOCKED) {
             boolean hasActiveOrders = client.hasMasterActiveOrders(id);
@@ -183,7 +181,6 @@ public class UserAccountService {
             }
         }
         
-        // Если мастер и меняем филиал - тоже проверяем активные заказы?
         if (user.getRole() == UserAccount.Role.MASTER && 
             request.getBranchId() != null && 
             !request.getBranchId().equals(user.getBranch() != null ? user.getBranch().getId() : null)) {
@@ -221,7 +218,6 @@ public class UserAccountService {
     	UserAccount user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
     	
-    	// Если это мастер - проверяем активные заказы
         if (user.getRole() == UserAccount.Role.MASTER) {
             boolean hasActiveOrders = client.hasMasterActiveOrders(id);
             if (hasActiveOrders) {

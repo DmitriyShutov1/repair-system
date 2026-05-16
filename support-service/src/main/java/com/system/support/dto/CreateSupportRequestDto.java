@@ -18,6 +18,10 @@ public class CreateSupportRequestDto {
     private Long orderId;
 
     private String description;
+    
+    private String deviceSerial;  
+    
+    private String deviceModel;   
 
     private List<OrderItemDto> items;
 }

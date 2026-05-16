@@ -1,20 +1,31 @@
 package com.system.orders.service;
 
 import com.system.orders.client.*;
-
-
 import com.system.orders.dto.CreateOrderRequest;
+import com.system.orders.dto.LatestTestResultDto;
+import com.system.orders.dto.OperationEventDTO;
 import com.system.orders.dto.OrderDetailsDto;
 import com.system.orders.dto.OrderItemDto;
 import com.system.orders.dto.OrderItemRequest;
+import com.system.orders.dto.TestDto;
+import com.system.orders.dto.*;
 import com.system.orders.dto.WarehousePartRequest;
 import com.system.orders.entity.Order;
 import com.system.orders.entity.OrderItem;
 import com.system.orders.entity.OrderStatusHistory;
+import com.system.orders.entity.Test;
+import com.system.orders.entity.TestSession;
+import com.system.orders.entity.TestSessionStep;
+//import com.system.orders.entity.TestsDescription;
+//import com.system.orders.entity.TestsHistory;
 import com.system.orders.repository.OrderItemRepository;
+import com.system.orders.repository.*;
 import com.system.orders.repository.OrderRepository;
 import com.system.orders.repository.OrderStatusHistoryRepository;
+//import com.system.orders.repository.TestsDescriptionRepository;
+//import com.system.orders.repository.TestsHistoryRepository;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +35,16 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.HttpStatusCodeException;
+import org.springframework.web.client.ResourceAccessException;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,16 +56,18 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
     private final OrderStatusHistoryRepository historyRepository;
     
-    //добавил
+    private final TestRepository testRepository;
+    private final TestSessionRepository testSessionRepository;
+    private final TestSessionStepRepository testSessionStepRepository;
+    
     private final SupportClient supportClient;
+    
+    private final OutboxService outboxService;
     
     
     private final WarehouseClient warehouseClient;
     private final UsersClient usersClient;
-    private final SagaHelper saga;
     
-    
-    //сделать SAGA компенсаторную
     @Transactional
     public Order createOrder(CreateOrderRequest request, Long userId,
             Long branchId,
@@ -62,6 +82,8 @@ public class OrderService {
                 .masterId(userId)
                 .warrantyId(request.getWarrantyId())
                 .branchId(branchId)
+                .deviceSerial(request.getDeviceSerial())    
+                .deviceModel(request.getDeviceModel())     
                 .diagnosticResult(request.getDiagnosticResult())
                 .status(Order.Status.CREATED)
                 .clientApproved(false)
@@ -80,15 +102,7 @@ public class OrderService {
         historyRepository.save(history);
         
         if (order.getWarrantyId() != null) {
-
-            Boolean started = supportClient.startWarranty(
-                    order.getWarrantyId(),
-                    userId
-            );
-
-            if (started == null) {
-                throw new RuntimeException("Support service unavailable");
-            }
+            supportClient.startWarranty(order.getWarrantyId(), userId);
         }
         
         return order;
@@ -97,67 +111,16 @@ public class OrderService {
     private String generatePickupCode() {
         return UUID.randomUUID().toString().substring(0, 8);
     }
-//
-//    public Order confirmOrder(Long orderId,Long clientId) {
-//
-//        Order order = orderRepository.findById(orderId)
-//                .orElseThrow(() -> new RuntimeException("Order not found"));
-//
-//        if (order.getStatus() != Order.Status.WAITING_FOR_APPROVAL) {
-//            throw new IllegalStateException("Order not waiting for approval");
-//        }
-//        Long branchId = order.getBranchId();
-//
-//        List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
-//
-//        List<OrderItem> parts = items.stream()
-//                .filter(i -> "PART".equals(i.getItemType()))
-//                .toList();
-//
-//        List<WarehousePartRequest> warehouseParts = parts.stream()
-//                .map(this::toWarehousePart)
-//                .toList();
-//
-//        Boolean reserved = warehouseClient.reserveParts(orderId, branchId, order.getMasterId(),  warehouseParts);
-//
-//        if (reserved == null) {
-//            throw new RuntimeException("Warehouse error");
-//        }
-////        if (reserved == null) {
-////
-////        	throw new RuntimeException("Warehouse troubles");
-////        }
-//        
-//        order.setClientApproved(true);
-//        
-//        if (reserved) {
-//            order.setStatus(Order.Status.WAITING_FOR_PARTS);
-//        } else {
-//            order.setStatus(Order.Status.IN_PROGRESS);
-//        }
-//        OrderStatusHistory history = OrderStatusHistory.builder()
-//                .order(order)
-//                .oldStatus(Order.Status.WAITING_FOR_APPROVAL) 
-//                .newStatus(order.getStatus())
-//                .changedBy(clientId)
-//                .changedAt(Instant.now())
-//                .build();
-//        historyRepository.save(history);
-//        order.setUpdatedAt(Instant.now());
-//
-//        return orderRepository.save(order);
-//    }
-    
+   
+    @Transactional
     public Order confirmOrder(Long orderId, Long clientId) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
 
         if (order.getStatus() != Order.Status.WAITING_FOR_APPROVAL) {
             throw new IllegalStateException("Order not waiting for approval");
         }
-
-        Long branchId = order.getBranchId();
 
         List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
 
@@ -166,50 +129,58 @@ public class OrderService {
                 .map(this::toWarehousePart)
                 .toList();
 
-        Boolean reserved = warehouseClient.reserveParts(
-                orderId,
-                branchId,
-                order.getMasterId(),
-                warehouseParts
-        );
-
-        if (reserved == null) {
-        	order.setStatus(Order.Status.CANCELLED_BY_MASTER);
-        	orderRepository.save(order);
-        	orderItemRepository.deleteAll(order.getItems());
-        	
-        	//добавил
-        	if (order.getWarrantyId() != null) {
-                supportClient.cancelWarranty(order.getWarrantyId(), false);
-            }
-        	
-            throw new RuntimeException("Warehouse error");
-            
-        }
+        boolean hasWaitingParts;
 
         try {
-            return saga.finalizeOrder(order, reserved, clientId);
-        } catch (Exception e) {
+            hasWaitingParts = warehouseClient.reserveParts(
+                    orderId,
+                    order.getBranchId(),
+                    order.getMasterId(),
+                    warehouseParts
+            );
 
-            if (reserved) {
-                warehouseClient.cancelReserve(orderId, branchId, order.getMasterId(), warehouseParts);
+        } catch (HttpClientErrorException e) {
+
+            if (order.getWarrantyId() != null) {
+                supportClient.cancelWarranty(order.getWarrantyId(), true);
             }
 
-            throw e;
+            Order.Status oldStatus = order.getStatus();
+
+            order.setStatus(Order.Status.CANCELLED_BY_MASTER);
+            order.setUpdatedAt(Instant.now());
+
+            OrderStatusHistory history = OrderStatusHistory.builder()
+                    .order(order)
+                    .oldStatus(oldStatus)
+                    .newStatus(order.getStatus())
+                    .changedBy(order.getMasterId())
+                    .changedAt(Instant.now())
+                    .build();
+
+            historyRepository.save(history);
+
+            return orderRepository.save(order);
+
+        } catch (HttpServerErrorException e) {
+
+            
+            throw new RuntimeException("Warehouse internal error", e);
+
+        } catch (ResourceAccessException e) {
+
+            throw new RuntimeException("Warehouse unavailable", e);
+        }catch (CallNotPermittedException e) {
+            throw new RuntimeException("Warehouse temporarily unavailable (circuit open)", e);
         }
-        
-        //return finalizeOrder(order, reserved, clientId);
-    }
-    
-    public Order finalizeOrder(Order order, Boolean reserved, Long clientId) {
 
         order.setClientApproved(true);
 
-        if (reserved) {
-            order.setStatus(Order.Status.WAITING_FOR_PARTS);
-        } else {
-            order.setStatus(Order.Status.IN_PROGRESS);
-        }
+        order.setStatus(
+                hasWaitingParts
+                        ? Order.Status.WAITING_FOR_PARTS
+                        : Order.Status.IN_PROGRESS
+        );
 
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(order)
@@ -230,7 +201,7 @@ public class OrderService {
     public Order completeOrder(Long orderId) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
 
         if (order.getStatus() != Order.Status.IN_PROGRESS) {
             throw new IllegalStateException("Order cannot be completed");
@@ -252,38 +223,84 @@ public class OrderService {
 
         return orderRepository.save(order);
     }
-
-    //добавить SAGA 
+    
     @Transactional
     public Order issueOrder(Long orderId, String pickupCode) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
 
         if (!order.getPickupCode().equals(pickupCode)) {
             throw new IllegalArgumentException("Invalid pickup code");
         }
 
-        if ((order.getStatus() != Order.Status.COMPLETED) && (order.getStatus() != Order.Status.CANCELLED_BY_MASTER) && (order.getStatus() != Order.Status.CANCELLED_BY_CLIENT)) {
-            throw new IllegalStateException("Order is not completed");
+        Order.Status previousStatus = order.getStatus();
+
+        if (previousStatus != Order.Status.COMPLETED &&
+            previousStatus != Order.Status.CANCELLED_BY_MASTER &&
+            previousStatus != Order.Status.CANCELLED_BY_CLIENT) {
+            throw new IllegalStateException("Order is not issuable");
         }
-        
+
         OrderStatusHistory history = OrderStatusHistory.builder()
                 .order(order)
-                .oldStatus(order.getStatus()) 
+                .oldStatus(previousStatus)
                 .newStatus(Order.Status.ISSUED)
                 .changedBy(order.getMasterId())
                 .changedAt(Instant.now())
                 .build();
+
         historyRepository.save(history);
 
         order.setStatus(Order.Status.ISSUED);
         order.setUpdatedAt(Instant.now());
-        
-        //добавил
+
         Order saved = orderRepository.save(order);
-        
-        //Добавил
+
+        if (order.getWarrantyId() == null) {
+
+            OperationEventDTO.OperationType type = switch (previousStatus) {
+                case COMPLETED -> OperationEventDTO.OperationType.ORDER_COMPLETED;
+                case CANCELLED_BY_CLIENT -> OperationEventDTO.OperationType.ORDER_CANCELLED_CLIENT;
+                case CANCELLED_BY_MASTER -> OperationEventDTO.OperationType.ORDER_CANCELLED_MASTER;
+                default -> throw new IllegalStateException("Unexpected status");
+            };
+
+            List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
+
+            BigDecimal clientAmount = items.stream()
+                    .map(i -> i.getSellPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal costPrice = items.stream()
+                    .map(i -> i.getCostPrice() == null ? BigDecimal.ZERO :
+                            i.getCostPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            BigDecimal masterAmount = items.stream()
+                    .map(i -> {
+                        if (i.getMasterPercentage() == null) return BigDecimal.ZERO;
+
+                        return i.getSellPrice()
+                                .multiply(i.getMasterPercentage())
+                                .divide(BigDecimal.valueOf(100))
+                                .multiply(BigDecimal.valueOf(i.getQuantity()));
+                    })
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            outboxService.save(OperationEventDTO.builder()
+                    .eventId(UUID.randomUUID())
+                    .type(type)
+                    .eventTime(LocalDateTime.now())
+                    .branchId(order.getBranchId())
+                    .masterId(order.getMasterId())
+                    .orderId(order.getOrderId())
+                    .clientAmount(clientAmount)
+                    .costPrice(costPrice)
+                    .masterAmount(masterAmount)
+                    .build());
+        }
+
         if (order.getWarrantyId() != null) {
 
             List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
@@ -292,150 +309,18 @@ public class OrderService {
                     .map(this::toOrderItemRequest)
                     .toList();
 
-            Boolean completed = supportClient.completeWarranty(
-                    order.getWarrantyId(),
-                    order.getMasterId(),
-                    itemsToSupport
-            );
-
-            if (completed == null) {
-                throw new RuntimeException("Support service error");
+            if (order.getWarrantyId() != null) {
+                supportClient.completeWarranty(
+                        order.getWarrantyId(),
+                        order.getMasterId(),
+                        itemsToSupport
+                );
             }
         }
-
         return saved;
     }
-//
-//    public Order cancelOrder(Long orderId,
-//                             Long branchId,
-//                             List<Long> itemsToRemove,
-//                             boolean cancelledByClient) {
-//
-//        Order order = orderRepository.findById(orderId)
-//                .orElseThrow(() -> new RuntimeException("Order not found"));
-//
-//        List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
-//
-//        List<OrderItem> removedItems = items.stream()
-//                .filter(i -> itemsToRemove.contains(i.getId()))
-//                .toList();
-//
-//        orderItemRepository.deleteAll(removedItems);
-//
-//        List<OrderItem> remaining = orderItemRepository.findByOrderOrderId(orderId);
-//
-//        List<OrderItem> parts = remaining.stream()
-//                .filter(i -> "PART".equals(i.getItemType()))
-//                .toList();
-//
-//        List<WarehousePartRequest> warehouseParts = parts.stream()
-//                .map(this::toWarehousePart)
-//                .toList();
-//
-//        if (!warehouseParts.isEmpty()) {
-//            warehouseClient.cancelReserve(orderId, branchId, warehouseParts);
-//        }
-//
-//        order.setStatus(cancelledByClient ?
-//                Order.Status.CANCELLED_BY_CLIENT :
-//                Order.Status.CANCELLED_BY_MASTER);
-//
-//        order.setUpdatedAt(Instant.now());
-//
-//        return orderRepository.save(order);
-//    }
-//    
-//    public Order cancelOrder(Long orderId,
-//            Long branchId,
-//            List<Long> itemsToRemove,
-//            boolean cancelledByClient) {
-//
-//		Order order = orderRepository.findById(orderId)
-//		.orElseThrow(() -> new RuntimeException("Order not found"));
-//		
-//		List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
-//		
-//		List<WarehousePartRequest> warehouseParts;
-//		
-//		switch (order.getStatus()) {
-//		
-//			case WAITING_FOR_APPROVAL:
-//			
-//				// просто очищаем items
-//				orderItemRepository.deleteAll(items);
-//				warehouseParts = List.of();
-//				break;
-//			
-//			
-//			case WAITING_FOR_PARTS:
-//			
-//				// возвращаем все PART
-//				warehouseParts = items.stream()
-//				       .filter(i -> "PART".equals(i.getItemType()))
-//				       .map(this::toWarehousePart)
-//				       .toList();
-//				break;
-//				
-//			
-//			case IN_PROGRESS:
-//				
-//				// удаляем использованные items
-//				List<OrderItem> removedItems = items.stream()
-//				       .filter(i -> itemsToRemove.contains(i.getId()))
-//				       .toList();
-//				
-//				orderItemRepository.deleteAll(removedItems);
-//				
-////				List<OrderItem> remaining = orderItemRepository.findByOrderOrderId(orderId);
-//				
-////				warehouseParts = remaining.stream()
-////				       .filter(i -> "PART".equals(i.getItemType()))
-////				       .map(this::toWarehousePart)
-////				       .toList();
-//				
-//				warehouseParts = removedItems.stream()
-//					       .filter(i -> "PART".equals(i.getItemType()))
-//					       .map(this::toWarehousePart)
-//					       .toList();
-//				
-//				break;
-//				
-//			
-//			default:
-//				throw new IllegalStateException("Order cannot be cancelled in status: " + order.getStatus());
-//		}
-//				
-////		if (!warehouseParts.isEmpty()) {
-////			warehouseClient.cancelReserve(orderId, branchId, warehouseParts);
-////		}
-//		
-//		if (!warehouseParts.isEmpty()) {
-//			boolean success = warehouseClient.cancelReserve(orderId, branchId, order.getMasterId(),  warehouseParts);
-//			if (!success) {
-//			    throw new RuntimeException("Warehouse cancel failed");
-//			}
-//		}
-//		
-//		OrderStatusHistory history = OrderStatusHistory.builder()
-//                .order(order)
-//                .oldStatus(order.getStatus()) 
-//                .changedBy(order.getMasterId())
-//                .changedAt(Instant.now())
-//                .build();
-//       
-//				
-//		order.setStatus(cancelledByClient ? Order.Status.CANCELLED_BY_CLIENT: Order.Status.CANCELLED_BY_MASTER);
-//		order.setUpdatedAt(Instant.now());
-//		
-//		history.setNewStatus(order.getStatus());
-//		historyRepository.save(history);
-//		
-//		
-//				
-//		return orderRepository.save(order);
-//	}
     
-    
+    @Transactional
     public Order cancelOrder(
             Long orderId,
             Long branchId,
@@ -443,33 +328,37 @@ public class OrderService {
             boolean cancelledByClient) {
 
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (order.getStatus() == Order.Status.CANCELLED_BY_CLIENT ||
+            order.getStatus() == Order.Status.CANCELLED_BY_MASTER) {
+            return order;
+        }
 
         List<OrderItem> items = orderItemRepository.findByOrderOrderId(orderId);
 
-        List<OrderItem> removedItems = new ArrayList<>();
-        List<WarehousePartRequest> warehouseParts = new ArrayList<>();
+        List<OrderItem> removedItems;
+        List<WarehousePartRequest> warehouseParts;
 
         switch (order.getStatus()) {
 
             case WAITING_FOR_APPROVAL:
-
-                removedItems.addAll(items);
-                break;
-
-            case WAITING_FOR_PARTS:
-
-                removedItems.addAll(items);
-
+                removedItems = items;
                 warehouseParts = items.stream()
                         .filter(i -> "PART".equals(i.getItemType()))
                         .map(this::toWarehousePart)
                         .toList();
+                break;
 
+            case WAITING_FOR_PARTS:
+                removedItems = items;
+                warehouseParts = items.stream()
+                        .filter(i -> "PART".equals(i.getItemType()))
+                        .map(this::toWarehousePart)
+                        .toList();
                 break;
 
             case IN_PROGRESS:
-
                 removedItems = items.stream()
                         .filter(i -> itemsToRemove.contains(i.getId()))
                         .toList();
@@ -478,7 +367,6 @@ public class OrderService {
                         .filter(i -> "PART".equals(i.getItemType()))
                         .map(this::toWarehousePart)
                         .toList();
-
                 break;
 
             default:
@@ -486,23 +374,40 @@ public class OrderService {
                         "Order cannot be cancelled in status: " + order.getStatus());
         }
 
-        // warehouse операция
         if (!warehouseParts.isEmpty()) {
-
-            boolean success = warehouseClient.cancelReserve(
+            warehouseClient.cancelReserve(
                     orderId,
                     branchId,
                     order.getMasterId(),
                     warehouseParts
             );
-
-            if (!success) {
-                throw new RuntimeException("Warehouse cancel failed");
-            }
         }
 
-        // локальная транзакция
-        return saga.finalizeCancel(order, removedItems, cancelledByClient);
+        if (!removedItems.isEmpty()) {
+            orderItemRepository.deleteAll(removedItems);
+        }
+        
+        Order.Status oldStatus = order.getStatus();
+
+        order.setStatus(
+                cancelledByClient
+                        ? Order.Status.CANCELLED_BY_CLIENT
+                        : Order.Status.CANCELLED_BY_MASTER
+        );
+
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .oldStatus(oldStatus)
+                .newStatus(order.getStatus())
+                .changedBy(order.getMasterId())
+                .changedAt(Instant.now())
+                .build();
+
+        historyRepository.save(history);
+
+        order.setUpdatedAt(Instant.now());
+
+        return orderRepository.save(order);
     }
     
     @Transactional
@@ -564,6 +469,9 @@ public class OrderService {
         List<Order> orders = orderRepository.findAllById(orderIds);
         
         for (Order order : orders) {
+        	if (order.getStatus() == Order.Status.IN_PROGRESS) {
+                continue;
+            }
             if (order.getStatus() != Order.Status.WAITING_FOR_PARTS) {
                 throw new IllegalStateException(
                     String.format("Order %d cannot be set to IN_PROGRESS from status: %s", 
@@ -591,7 +499,7 @@ public class OrderService {
     public OrderDetailsDto getOrderWithItems(Long orderId) {
 
         Order order = orderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
 
         List<OrderItemDto> items = order.getItems()
                 .stream()
@@ -613,6 +521,8 @@ public class OrderService {
                 .masterId(order.getMasterId())
                 .warrantyId(order.getWarrantyId())
                 .status(order.getStatus().name())
+                .deviceSerial(order.getDeviceSerial())     
+                .deviceModel(order.getDeviceModel())       
                 .diagnosticResult(order.getDiagnosticResult())
                 .createdAt(order.getCreatedAt())
                 .completedAt(order.getCompletedAt())
@@ -691,7 +601,7 @@ public class OrderService {
     public String getPickupCode(Long orderId) {
     	
     	Order order = orderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+                .orElseThrow(() -> new EntityNotFoundException("Order not found: " + orderId));
     	
     	return order.getPickupCode();
     }
@@ -709,18 +619,120 @@ public class OrderService {
                 .quantity(item.getQuantity())
                 .build();
     }
-//    
-//    
-//    public List<Order> getOrdersByMasterAndStatus(Long masterId, Order.Status status) {
-//        return orderRepository.findByStatusAndMasterId(status, masterId);
-//    }
-//    
-//    public List<Order> getOrdersByClientNotIssued(Long clientId) {
-//        return orderRepository.findByClientIdAndStatusNot(clientId, Order.Status.ISSUED);
-//    }
-//    
-//    public List<Order> getOrdersByClientIssued(Long clientId) {
-//        return orderRepository.findByClientIdAndStatus(clientId, Order.Status.ISSUED);
-//    }
     
+ 
+    @Transactional
+    public List<TestDto> getAllTests() {
+        return testRepository.findByActiveTrue()
+                .stream()
+                .map(t -> TestDto.builder()
+                        .id(t.getId())
+                        .name(t.getName())
+                        .description(t.getDescription())
+                        .build())
+                .toList();
+    }
+    
+    @Transactional
+    public void saveTestResults(Long orderId, Long masterId, List<TestResultDto> results) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Order not found"));
+
+        if (order.getStatus() != Order.Status.IN_PROGRESS &&
+            order.getStatus() != Order.Status.TESTING) {
+            throw new IllegalStateException("Order is not ready for testing");
+        }
+
+        List<Test> activeTests = testRepository.findByActiveTrue();
+
+        List<Long> activeIds = activeTests.stream()
+                .map(Test::getId)
+                .toList();
+
+        List<Long> incomingIds = results.stream()
+                .map(TestResultDto::getTestId)
+                .toList();
+
+        if (!incomingIds.containsAll(activeIds)) {
+            throw new IllegalStateException("Not all active tests were provided");
+        }
+
+        TestSession session = TestSession.builder()
+                .orderId(orderId)
+                .build();
+
+        testSessionRepository.save(session);
+
+        boolean allPassed = true;
+
+        for (TestResultDto dto : results) {
+
+            TestSessionStep step = TestSessionStep.builder()
+                    .sessionId(session.getId())
+                    .testId(dto.getTestId())
+                    .passed(dto.isPassed())
+                    .build();
+
+            testSessionStepRepository.save(step);
+
+            if (!dto.isPassed()) {
+                allPassed = false;
+            }
+        }
+
+        Order.Status oldStatus = order.getStatus();
+        Order.Status newStatus = allPassed
+                ? Order.Status.COMPLETED
+                : Order.Status.IN_PROGRESS;
+
+        order.setStatus(newStatus);
+        order.setUpdatedAt(Instant.now());
+
+        if (newStatus == Order.Status.COMPLETED) {
+            order.setCompletedAt(Instant.now());
+        }
+
+        orderRepository.save(order);
+
+        OrderStatusHistory history = OrderStatusHistory.builder()
+                .order(order)
+                .oldStatus(oldStatus)
+                .newStatus(newStatus)
+                .changedBy(masterId)
+                .changedAt(Instant.now())
+                .build();
+
+        historyRepository.save(history);
+    }
+    
+    @Transactional
+    public List<TestSessionDto> getSessionsByOrder(Long orderId) {
+
+        return testSessionRepository.findByOrderId(orderId)
+                .stream()
+                .sorted(Comparator.comparing(TestSession::getSessionAt).reversed())
+                .map(s -> TestSessionDto.builder()
+                        .sessionId(s.getId())
+                        .sessionAt(s.getSessionAt())
+                        .build())
+                .toList();
+    }
+    
+    @Transactional
+    public List<TestSessionStepDto> getStepsBySession(Long sessionId) {
+
+        return testSessionStepRepository.findBySessionId(sessionId)
+                .stream()
+                .map(s -> TestSessionStepDto.builder()
+                        .stepId(s.getId())
+                        .testId(s.getTestId())
+                        .passed(s.getPassed())
+                        .createdAt(s.getCreatedAt())
+                        .build())
+                .toList();
+    }
+
 }
+
+

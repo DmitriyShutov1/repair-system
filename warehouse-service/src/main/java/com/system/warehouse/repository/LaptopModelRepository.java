@@ -19,17 +19,9 @@ import lombok.RequiredArgsConstructor;
 @Repository
 public interface LaptopModelRepository extends JpaRepository<LaptopModel, Long> {
 
-    /* =======================
-       BASIC FIND
-       ======================= */
-
     Optional<LaptopModel> findByIdAndActiveTrue(Long id);
 
     Page<LaptopModel> findAllByActiveTrue(Pageable pageable);
-
-    /* =======================
-       SEARCH
-       ======================= */
 
     Page<LaptopModel> findAllByBrandIgnoreCaseAndActiveTrue(
             String brand,
@@ -47,15 +39,7 @@ public interface LaptopModelRepository extends JpaRepository<LaptopModel, Long> 
             String modelName
     );
 
-    /* =======================
-       VALIDATION
-       ======================= */
-
     boolean existsByBrandIgnoreCaseAndModelNameIgnoreCase(String brand, String modelName);
-
-    /* =======================
-       SOFT DELETE
-       ======================= */
 
     @Modifying
     @Query("""

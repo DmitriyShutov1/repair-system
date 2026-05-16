@@ -53,15 +53,9 @@ public class StockMovement {
     @Column(name = "order_id")
     private Long orderId;
 
-    /**
-     * Время фиксируем один раз при создании.
-     */
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    /**
-     * Автоматически ставим timestamp перед insert.
-     */
     @PrePersist
     void onCreate() {
         this.createdAt = LocalDateTime.now();

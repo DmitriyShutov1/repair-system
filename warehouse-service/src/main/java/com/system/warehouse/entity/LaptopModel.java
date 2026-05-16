@@ -43,7 +43,6 @@ public class LaptopModel {
     @Column(name = "version", nullable = false)
     private Long version;
 
-    // equals/hashCode ТОЛЬКО по id — важно для Hibernate
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

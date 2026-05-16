@@ -23,9 +23,7 @@ public class PartWaitingListService {
     private final OrdersClient ordersClient;
 
     
-    /**
-     * Добавление записи в список ожидания
-     */
+
     @Transactional
     public PartWaitingList addToWaitingList(Long orderId,
                                             Part part,
@@ -43,27 +41,13 @@ public class PartWaitingListService {
     }
 
 
-    /**
-     * Удаление записи по id
-     */
+
     @Transactional
     public void deleteById(Long id) {
         repository.setThisClosed(id);
     }
 
 
-    /**
-     * Изменение количества
-     */
-//    @Transactional
-//    public void updateQuantity(Long id, Integer quantity) {
-//        int updated = repository.updateQuantity(id, quantity);
-//
-//        if (updated == 0) {
-//            throw new RuntimeException("Waiting list entry not found: " + id);
-//        }
-//    }
-    
     @Transactional
     public void updateQuantity(Long id, Integer quantity) {
     	PartWaitingList waitingList = repository.findById(id)
@@ -72,9 +56,6 @@ public class PartWaitingListService {
     }
 
 
-    /**
-     * Поиск по id
-     */
     @Transactional(readOnly = true)
     public PartWaitingList getById(Long id) {
         return repository.findById(id)
@@ -82,26 +63,18 @@ public class PartWaitingListService {
     }
 
 
-    /**
-     * Поиск по part_id и branch_id
-     */
     @Transactional(readOnly = true)
     public List<PartWaitingList> getByPartAndBranch(Long partId, Long branchId) {
         return repository.findActiveByPartIdAndBranchId(partId, branchId);
     }
 
 
-    /**
-     * Агрегация количества по order_id
-     */
     @Transactional(readOnly = true)
     public Integer getTotalRequiredQuantityByOrder(Long orderId) {
         return repository.sumRequiredQuantityByOrderId(orderId);
     }
     
     
-    //ПЕРЕДЕЛАТЬ, НАДО ПРОСТО ОТПРАВИТЬ ЗАПРОС НА ОТМЕНУ ВСЕХ ЗАКАЗОВ ИЗ ЛИСТОВ ОЖИДАНИЯ
-    //ДЛЯ ДАННОЙ ЗАПЧАСТИ.
     @Transactional
     public void closeAllByPartId(Long partId) {
     	Part part = partRepository.findById(partId)

@@ -7,54 +7,48 @@ import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class WarehouseOrdersClient {
 
     private final RestTemplate restTemplate;
-    
+
     private static final String ORDERS_SERVICE_URL = "http://orders-service:8083";
     private static final String WAREHOUSE_SERVICE_URL = "http://warehouse-service:8082";
 
-    // =============== ORDERS SERVICE METHODS ===============
-
-    /**
-     * Проверяет, есть ли у мастера активные заказы
-     */
     public boolean hasMasterActiveOrders(Long masterId) {
-        try {
-            String url = ORDERS_SERVICE_URL + "/api/orders/master/" + masterId + "/has-active-orders";
+       
+            String url = ORDERS_SERVICE_URL
+                    + "/api/orders/master/" + masterId + "/has-active-orders";
+
             Boolean result = restTemplate.getForObject(url, Boolean.class);
-            return result != null && result;
-        } catch (Exception e) {
-            log.error("Failed to check active orders for master {}: {}", masterId, e.getMessage());
-            return false;
-        }
+            return Boolean.TRUE.equals(result);
+
+        
     }
 
-    // =============== WAREHOUSE SERVICE METHODS ===============
-
-    /**
-     * Удаляет все остатки по филиалу (требует роль ADMIN)
-     */
+    @Retry(name = "warehouseRetry")
+    @CircuitBreaker(name = "warehouseCircuit", fallbackMethod = "deleteStockFallback")
     public void deleteAllStockByBranch(Long branchId) {
-        try {
-            String url = WAREHOUSE_SERVICE_URL + "/api/stock/branch/" + branchId;
-            
-            // Создаем заголовки с ролью
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("X-User-Role", "ADMIN");
-            
-            HttpEntity<?> entity = new HttpEntity<>(headers);
-            
-            // Отправляем DELETE запрос с заголовками
-            restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
-            
-            log.info("Deleted all stock for branch: {}", branchId);
-        } catch (Exception e) {
-            log.error("Failed to delete stock for branch {}: {}", branchId, e.getMessage());
-            throw new RuntimeException("Failed to delete warehouse stock for branch: " + branchId, e);
-        }
+
+        String url = WAREHOUSE_SERVICE_URL + "/api/stock/branch/" + branchId;
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-User-Role", "ADMIN");
+
+        HttpEntity<?> entity = new HttpEntity<>(headers);
+
+        restTemplate.exchange(url, HttpMethod.DELETE, entity, Void.class);
+
+        log.info("Deleted warehouse stock for branch={}", branchId);
+    }
+
+    private void deleteStockFallback(Long branchId, Throwable ex) {
+        log.error("Warehouse delete stock fallback branch={}", branchId, ex);
+        throw new RuntimeException("Warehouse unavailable", ex);
     }
 }

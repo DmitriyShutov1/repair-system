@@ -20,21 +20,6 @@ import jakarta.persistence.OptimisticLockException;
 import com.system.warehouse.dto.*;
 import lombok.RequiredArgsConstructor;
 
-//ДОБАВЬ ИНДЕКС В МИГРАЦИЮ
-//CREATE UNIQUE INDEX uniq_active_part_price
-//ON pricing_policy(part_id)
-//WHERE effective_to IS NULL;
-
-//ВОТ ИХ ОБА НАДО
-//CREATE UNIQUE INDEX uniq_active_part_price
-//ON pricing_policy(part_id)
-//WHERE effective_to IS NULL;
-//
-//CREATE UNIQUE INDEX uniq_active_service_price
-//ON pricing_policy(service_id)
-//WHERE effective_to IS NULL;
-
-
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -44,10 +29,6 @@ public class PricingPolicyService {
     private final PartRepository partRepository;
     private final ServiceRepository serviceRepository;
 
-    // =========================================================
-    // UPSERT (создание новой политики с закрытием старой)
-    // =========================================================
-
     @Transactional
     public PricingPolicyResponse upsert(PricingPolicyUpsertRequest request) {
 
@@ -55,7 +36,6 @@ public class PricingPolicyService {
 
         LocalDateTime now = LocalDateTime.now();
 
-        // 1️⃣ Закрываем предыдущую активную политику
         if (request.partId() != null) {
             pricingPolicyRepository.findActiveByPartId(request.partId())
                     .ifPresent(existing -> {
@@ -70,7 +50,6 @@ public class PricingPolicyService {
                     });
         }
 
-        // 2️⃣ Загружаем ссылочную сущность
         Part part = null;
         com.system.warehouse.entity.Service service = null;
 
@@ -84,7 +63,6 @@ public class PricingPolicyService {
                     .orElseThrow(() -> new EntityNotFoundException("Service not found"));
         }
 
-        // 3️⃣ Создаем новую запись
         PricingPolicy newPolicy = PricingPolicy.builder()
                 .part(part)
                 .service(service)
@@ -99,10 +77,6 @@ public class PricingPolicyService {
 
         return mapToResponse(saved);
     }
-
-    // =========================================================
-    // DELETE (закрытие текущей политики)
-    // =========================================================
 
     @Transactional
     public void closeCurrentPolicyForPart(Long partId) {
@@ -124,29 +98,17 @@ public class PricingPolicyService {
         policy.setEffectiveTo(LocalDateTime.now());
     }
 
-    // =========================================================
-    // SEARCH BY PART
-    // =========================================================
-
     public Page<PricingPolicyResponse> findAllByPartId(Long partId, Pageable pageable) {
         return pricingPolicyRepository
                 .findAllByPartId(partId, pageable)
                 .map(this::mapToResponse);
     }
 
-    // =========================================================
-    // SEARCH BY SERVICE
-    // =========================================================
-
     public Page<PricingPolicyResponse> findAllByServiceId(Long serviceId, Pageable pageable) {
         return pricingPolicyRepository
                 .findAllByServiceId(serviceId, pageable)
                 .map(this::mapToResponse);
     }
-
-    // =========================================================
-    // CURRENT ACTIVE
-    // =========================================================
 
     public PricingPolicyResponse findActiveByPartId(Long partId) {
         return pricingPolicyRepository.findActiveByPartId(partId)
@@ -160,19 +122,11 @@ public class PricingPolicyService {
                 .orElseThrow(() -> new EntityNotFoundException("Active pricing policy not found"));
     }
 
-    // =========================================================
-    // ACTUAL AT MOMENT
-    // =========================================================
-
     public PricingPolicyResponse findActualAtMoment(Long partId, LocalDateTime moment) {
         return pricingPolicyRepository.findActualAtMoment(partId, moment)
                 .map(this::mapToResponse)
                 .orElseThrow(() -> new EntityNotFoundException("Pricing policy not found for moment"));
     }
-
-    // =========================================================
-    // VALIDATION
-    // =========================================================
 
     private void validateTarget(PricingPolicyUpsertRequest request) {
 
@@ -184,10 +138,6 @@ public class PricingPolicyService {
             throw new IllegalArgumentException("Only one of partId or serviceId must be provided");
         }
     }
-
-    // =========================================================
-    // MAPPER
-    // =========================================================
 
     private PricingPolicyResponse mapToResponse(PricingPolicy policy) {
         return PricingPolicyResponse.builder()

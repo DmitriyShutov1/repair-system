@@ -26,6 +26,10 @@ public class SupInfo {
 
     private String description;
     
+    private String deviceSerial;  
+    
+    private String deviceModel;   
+    
     private BigDecimal refundCost;
     
     private Instant createdAt;

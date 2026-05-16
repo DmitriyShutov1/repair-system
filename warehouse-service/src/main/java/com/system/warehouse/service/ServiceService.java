@@ -26,10 +26,6 @@ public class ServiceService {
 
     private final ServiceRepository serviceRepository;
 
-    // ======================================
-    // CREATE
-    // ======================================
-
     @Transactional
     public ServiceResponse create(ServiceCreateRequest request) {
 
@@ -49,17 +45,12 @@ public class ServiceService {
         return mapToResponse(saved);
     }
 
-    // ======================================
-    // UPDATE
-    // ======================================
-
     @Transactional
     public ServiceResponse update(Long id, ServiceUpdateRequest request) {
 
     	com.system.warehouse.entity.Service service = serviceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Service not found"));
 
-        // optimistic locking check
         if (!service.getVersion().equals(request.version())) {
             throw new OptimisticLockException("Service was modified by another transaction");
         }
@@ -76,10 +67,6 @@ public class ServiceService {
         return mapToResponse(updated);
     }
 
-    // ======================================
-    // SOFT DELETE
-    // ======================================
-
     @Transactional
     public void delete(Long id) {
 
@@ -93,20 +80,12 @@ public class ServiceService {
         serviceRepository.softDelete(id);
     }
 
-    // ======================================
-    // FIND BY ID
-    // ======================================
-
     public ServiceResponse findById(Long id) {
     	com.system.warehouse.entity.Service service = serviceRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Service not found"));
 
         return mapToResponse(service);
     }
-
-    // ======================================
-    // FIND BY SERVICE CODE
-    // ======================================
 
     public ServiceResponse findByServiceCode(String serviceCode) {
     	com.system.warehouse.entity.Service service = serviceRepository
@@ -116,19 +95,11 @@ public class ServiceService {
         return mapToResponse(service);
     }
 
-    // ======================================
-    // FIND BY CATEGORY (ACTIVE ONLY)
-    // ======================================
-
     public Page<ServiceResponse> findByCategory(ServiceCategory category, Pageable pageable, Boolean active) {
         return serviceRepository
                 .findAllByCategoryAndActive(category, pageable, active)
                 .map(this::mapToResponse);
     }
-
-    // ======================================
-    // SEARCH BY NAME (ILIKE + similarity)
-    // ======================================
 
     public Page<ServiceResponse> searchByName(String query, Pageable pageable) {
         return serviceRepository
@@ -137,10 +108,6 @@ public class ServiceService {
     }
     
     
-	 // ======================================
-	 // SEARCH WITH PRICE BY NAME
-	 // ======================================
-	
 	 public Page<ServiceWithPriceDto> searchWithPriceByName(
 	         String query,
 	         Boolean active,
@@ -149,10 +116,6 @@ public class ServiceService {
 	     return serviceRepository.searchWithPriceByName(query, active, pageable);
 	 }
 	
-	 // ======================================
-	 // FIND WITH PRICE BY CATEGORY
-	 // ======================================
-	
 	 public Page<ServiceWithPriceDto> findWithPriceByCategory(
 	         ServiceCategory category,
 	         Boolean active,
@@ -160,11 +123,7 @@ public class ServiceService {
 	
 	     return serviceRepository.findWithPriceByCategory(category, active, pageable);
 	 }
-	
-	 // ======================================
-	 // FIND WITH PRICE BY SERVICE CODE
-	 // ======================================
-	
+
 	 public ServiceWithPriceDto findWithPriceByServiceCode(
 	         String serviceCode,
 	         Boolean active) {
@@ -177,10 +136,6 @@ public class ServiceService {
 	 public Page<com.system.warehouse.entity.Service> findServicesWithoutActivePrice(Pageable pageable) {
 		 return serviceRepository.findServicesWithoutActivePrice(pageable);
 	 }
-
-    // ======================================
-    // MAPPER
-    // ======================================
 
     private ServiceResponse mapToResponse(com.system.warehouse.entity.Service service) {
         return ServiceResponse.builder()
