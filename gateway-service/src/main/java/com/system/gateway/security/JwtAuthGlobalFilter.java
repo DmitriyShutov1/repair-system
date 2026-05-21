@@ -27,6 +27,8 @@ import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.http.MediaType;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 @Slf4j
 @Component
@@ -40,8 +42,19 @@ public class JwtAuthGlobalFilter implements GlobalFilter, Ordered {
             "/api/auth/refresh"
     );
 
-    public JwtAuthGlobalFilter(@Value("${security.jwt.public-key}") String publicKey) {
-
+//    public JwtAuthGlobalFilter(@Value("${security.jwt.public-key}") String publicKey) {
+//
+//        RSAPublicKey rsaPublicKey = KeyUtils.parsePublicKey(publicKey);
+//        this.jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaPublicKey).build();
+//    }
+    
+    public JwtAuthGlobalFilter(@Value("${security.jwt.public-key-path}") String publicKeyPath) {
+        String publicKey;
+        try {
+            publicKey = Files.readString(Path.of(publicKeyPath));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read public key from " + publicKeyPath, e);
+        }
         RSAPublicKey rsaPublicKey = KeyUtils.parsePublicKey(publicKey);
         this.jwtDecoder = NimbusJwtDecoder.withPublicKey(rsaPublicKey).build();
     }

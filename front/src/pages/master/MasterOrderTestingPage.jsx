@@ -11,11 +11,7 @@ export default function MasterOrderTestingPage(){
   const { orderId } = useParams();
 
   const [tests,setTests] = useState([]);
-  const [results,setResults] = useState({}); // testId -> boolean
-
-  // =========================
-  // LOAD TESTS
-  // =========================
+  const [results,setResults] = useState({}); 
 
   const loadTests = async () => {
     const data = await apiClient(
@@ -28,7 +24,7 @@ export default function MasterOrderTestingPage(){
     if(data){
       setTests(data);
 
-      // инициализация результатов
+
       const initial = {};
       data.forEach(t => {
         initial[t.id] = false;
@@ -41,20 +37,12 @@ export default function MasterOrderTestingPage(){
     loadTests();
   },[]);
 
-  // =========================
-  // TOGGLE CHECKBOX
-  // =========================
-
   const toggleResult = (testId) => {
     setResults(prev => ({
       ...prev,
       [testId]: !prev[testId]
     }));
   };
-
-  // =========================
-  // SUBMIT RESULTS
-  // =========================
 
   const submitResults = async () => {
 
@@ -72,13 +60,8 @@ export default function MasterOrderTestingPage(){
 
     alert("Результаты тестирования сохранены");
 
-    // можно вернуть назад
     navigate(`/master/orders/${orderId}`);
   };
-
-  // =========================
-  // UI
-  // =========================
 
   return(
     <div>

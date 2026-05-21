@@ -18,8 +18,6 @@ const auth = useContext(AuthContext)
 const navigate = useNavigate()
 const {orderId} = useParams()
 
-// ===== SEARCH STATE =====
-
 const [partQuery,setPartQuery] = useState("")
 const [partCategory,setPartCategory] = useState("")
 const [parts,setParts] = useState([])
@@ -30,14 +28,8 @@ const [serviceCategory,setServiceCategory] = useState("")
 const [services,setServices] = useState([])
 const [servicePage,setServicePage] = useState(0)
 
-// ===== CART =====
-
 const [partsCart,setPartsCart] = useState([])
 const [servicesCart,setServicesCart] = useState([])
-
-// =========================
-// PART SEARCH
-// =========================
 
 const searchParts = async(page=0)=>{
 
@@ -58,10 +50,6 @@ setParts(data.content)
 setPartPage(page)
 }
 
-// =========================
-// SERVICE SEARCH
-// =========================
-
 const searchServices = async(page=0)=>{
 
 let url=""
@@ -80,10 +68,6 @@ const data = await apiClient(url,"GET",null,auth)
 setServices(data.content)
 setServicePage(page)
 }
-
-// =========================
-// ADD TO CART
-// =========================
 
 const addPartToCart = (p)=>{
 
@@ -108,10 +92,6 @@ if(servicesCart.find(x=>x.id===s.id)) return
 setServicesCart([...servicesCart,s])
 }
 
-// =========================
-// UPDATE QUANTITY
-// =========================
-
 const changeQuantity=(id,q)=>{
 
 setPartsCart(
@@ -123,10 +103,6 @@ return p
 
 }
 
-// =========================
-// REMOVE
-// =========================
-
 const removePart=(id)=>{
 setPartsCart(partsCart.filter(p=>p.id!==id))
 }
@@ -135,15 +111,10 @@ const removeService=(id)=>{
 setServicesCart(servicesCart.filter(s=>s.id!==id))
 }
 
-// =========================
-// SEND TO ORDERS
-// =========================
-
 const confirmItems = async()=>{
 
 const items=[]
 
-// PARTS
 partsCart.forEach(p=>{
 items.push({
 id:p.id,
@@ -158,7 +129,6 @@ quantity:p.quantity
 })
 })
 
-// SERVICES
 servicesCart.forEach(s=>{
 items.push({
 id:s.id,
@@ -187,10 +157,6 @@ alert("Позиции установлены")
 
 navigate(`/master/orders/${orderId}`)
 }
-
-// =========================
-// UI
-// =========================
 
 return(
 
@@ -224,25 +190,6 @@ searchParts(0)
 <option key={c}>{c}</option>
 )}
 </select>
-
-{/* {parts.map(p=>
-
-<div key={p.id} style={{border:'1px solid gray',margin:5,padding:5}}>
-
-<b>{p.name}</b>
-
-<p>Артикул: {p.articleNumber}</p>
-<p>Категория: {p.category}</p>
-<p>Цена: {p.clientPrice}</p>
-<p>Наличие: {p.quantity}</p>
-
-<button onClick={()=>addPartToCart(p)}>
-Добавить к ремонту
-</button>
-
-</div>
-
-)} */}
 
 {parts.map(p =>
 

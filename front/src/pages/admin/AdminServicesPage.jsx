@@ -1,222 +1,3 @@
-// import React, { useContext, useState } from 'react';
-// import { AuthContext } from '../../auth/AuthContext';
-// import { apiClient } from '../../api/apiClient';
-
-// const categories = [
-// 'SOFTWARE','MAINTENANCE','SOLDERING',
-// 'DIAGNOSTICS','CLEANING','UPGRADE'
-// ];
-
-// export default function AdminServicesPage(){
-
-// const auth = useContext(AuthContext);
-
-// const [results,setResults] = useState([]);
-
-// const [page,setPage] = useState(0);
-// const [size] = useState(10);
-// const [totalPages,setTotalPages] = useState(0);
-
-// const [mode,setMode] = useState(null);
-
-// const [searchName,setSearchName] = useState('');
-// const [searchCategory,setSearchCategory] = useState('');
-// const [searchCode,setSearchCode] = useState('');
-// const [searchId,setSearchId] = useState('');
-
-// const [createForm,setCreateForm] = useState({
-// name:'',
-// serviceCode:'',
-// category:'SOFTWARE'
-// });
-
-// const [updateForm,setUpdateForm] = useState(null);
-
-// const applyPage = (data)=>{
-// setResults(data.content);
-// setTotalPages(data.totalPages);
-// };
-
-// const createService = async ()=>{
-
-// const data = await apiClient(
-// '/api/services',
-// 'POST',
-// createForm,
-// auth
-// );
-
-// alert("Создано id="+data.id);
-// };
-
-// const updateService = async ()=>{
-
-// const data = await apiClient(
-// `/api/services/${updateForm.id}`,
-// 'PUT',
-// {
-// name:updateForm.name,
-// category:updateForm.category,
-// active:updateForm.active,
-// version:updateForm.version
-// },
-// auth
-// );
-
-// setUpdateForm(data);
-// };
-
-// const deleteService = async (id)=>{
-
-// await apiClient(`/api/services/${id}`,'DELETE',null,auth);
-
-// setResults(results.filter(s=>s.id!==id));
-// };
-
-// const searchByName = async(p=0)=>{
-
-// setMode("name");
-
-// const data = await apiClient(
-// `/api/services/search?query=${searchName}&page=${p}&size=${size}`,
-// 'GET',null,auth
-// );
-
-// setPage(p);
-// applyPage(data);
-// };
-
-// const findByCategory = async(p=0)=>{
-
-// setMode("category");
-
-// const data = await apiClient(
-// `/api/services/by-category?category=${searchCategory}&active=true&page=${p}&size=${size}`,
-// 'GET',null,auth
-// );
-
-// setPage(p);
-// applyPage(data);
-// };
-
-// const findByCode = async()=>{
-
-// const data = await apiClient(
-// `/api/services/by-code?serviceCode=${searchCode}`,
-// 'GET',null,auth
-// );
-
-// setResults([data]);
-// setTotalPages(0);
-// };
-
-// const findById = async()=>{
-
-// const data = await apiClient(
-// `/api/services/${searchId}`,
-// 'GET',null,auth
-// );
-
-// setResults([data]);
-// setTotalPages(0);
-// };
-
-// const nextPage = ()=>{
-
-// if(page+1>=totalPages) return;
-
-// if(mode==="name") searchByName(page+1);
-// if(mode==="category") findByCategory(page+1);
-// };
-
-// const prevPage = ()=>{
-
-// if(page===0) return;
-
-// if(mode==="name") searchByName(page-1);
-// if(mode==="category") findByCategory(page-1);
-// };
-
-// return (
-
-// <div>
-
-// <h2>Управление услугами</h2>
-
-// <hr/>
-
-// <h3>Создать</h3>
-
-// <input placeholder="Name"
-// onChange={e=>setCreateForm({...createForm,name:e.target.value})}/>
-
-// <input placeholder="Service code"
-// onChange={e=>setCreateForm({...createForm,serviceCode:e.target.value})}/>
-
-// <select
-// onChange={e=>setCreateForm({...createForm,category:e.target.value})}>
-// {categories.map(c=><option key={c}>{c}</option>)}
-// </select>
-
-// <button onClick={createService}>Создать</button>
-
-// <hr/>
-
-// <h3>Поиск</h3>
-
-// <input placeholder="ID"
-// onChange={e=>setSearchId(e.target.value)}/>
-// <button onClick={findById}>Найти</button>
-
-// <input placeholder="Service code"
-// onChange={e=>setSearchCode(e.target.value)}/>
-// <button onClick={findByCode}>Найти</button>
-
-// <select onChange={e=>setSearchCategory(e.target.value)}>
-// <option>Category</option>
-// {categories.map(c=><option key={c}>{c}</option>)}
-// </select>
-
-// <button onClick={()=>findByCategory(0)}>По категории</button>
-
-// <input placeholder="Name"
-// onChange={e=>setSearchName(e.target.value)}/>
-// <button onClick={()=>searchByName(0)}>По имени</button>
-
-// <hr/>
-
-// {results.map(service=>(
-// <div key={service.id} style={{border:'1px solid gray',margin:10,padding:10}}>
-
-// <p>ID: {service.id}</p>
-// <p>Name: {service.name}</p>
-// <p>Code: {service.serviceCode}</p>
-// <p>Category: {service.category}</p>
-
-// <button onClick={()=>setUpdateForm(service)}>Edit</button>
-// <button onClick={()=>deleteService(service.id)}>Delete</button>
-
-// </div>
-// ))}
-
-// {totalPages>1 && (
-
-// <div>
-
-// <button onClick={prevPage}>←</button>
-
-// <span>Page {page+1} / {totalPages}</span>
-
-// <button onClick={nextPage}>→</button>
-
-// </div>
-
-// )}
-
-// </div>
-// );
-// }
-
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../../auth/AuthContext';
 import { apiClient } from '../../api/apiClient';
@@ -254,7 +35,6 @@ export default function AdminServicesPage() {
     setTotalPages(data.totalPages || 0);
   };
 
-  // ===================== CREATE =====================
   const createService = async () => {
     const data = await apiClient('/api/services', 'POST', createForm, auth);
     alert("Создано id=" + data.id);
@@ -263,7 +43,6 @@ export default function AdminServicesPage() {
     else if (mode === 'name') searchByName(page);
   };
 
-  // ===================== UPDATE =====================
   const updateService = async () => {
     const data = await apiClient(
       `/api/services/${updateForm.id}`,
@@ -280,14 +59,12 @@ export default function AdminServicesPage() {
     setUpdateForm(null);
   };
 
-  // ===================== DELETE =====================
   const deleteService = async (id) => {
     if (!window.confirm('Удалить услугу?')) return;
     await apiClient(`/api/services/${id}`, 'DELETE', null, auth);
     setResults(prev => prev.filter(s => s.id !== id));
   };
 
-  // ===================== SEARCH =====================
   const searchByName = async (p = 0) => {
     setMode("name");
     const data = await apiClient(
@@ -343,7 +120,6 @@ export default function AdminServicesPage() {
       <h2>Управление услугами</h2>
       <hr />
 
-      {/* ===== CREATE ===== */}
       <h3>Создать услугу</h3>
       <input
         placeholder="Название"
@@ -365,7 +141,6 @@ export default function AdminServicesPage() {
 
       <hr />
 
-      {/* ===== SEARCH ===== */}
       <h3>Поиск</h3>
       <div style={{ marginBottom: 5 }}>
         <input placeholder="ID" value={searchId} onChange={e => setSearchId(e.target.value)} />
@@ -391,7 +166,6 @@ export default function AdminServicesPage() {
 
       <hr />
 
-      {/* ===== UPDATE FORM ===== */}
       {updateForm && (
         <div style={{ border: '2px solid blue', padding: 10, marginBottom: 15, background: '#f0f4ff' }}>
           <h4>Редактирование: {updateForm.name} (ID: {updateForm.id})</h4>
@@ -423,7 +197,6 @@ export default function AdminServicesPage() {
         </div>
       )}
 
-      {/* ===== RESULTS ===== */}
       {results.length === 0 && <p>Ничего не найдено</p>}
       {results.map(service => (
         <div key={service.id} style={{ border: '1px solid gray', margin: 10, padding: 10 }}>
@@ -437,7 +210,6 @@ export default function AdminServicesPage() {
         </div>
       ))}
 
-      {/* ===== PAGINATION ===== */}
       {totalPages > 1 && (
         <div style={{ marginTop: 10 }}>
           <button onClick={prevPage} disabled={page === 0}>← Назад</button>

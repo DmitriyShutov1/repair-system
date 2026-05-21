@@ -15,10 +15,6 @@ export default function MasterTestSessionDetailsPage(){
   const [steps,setSteps] = useState([]);
   const [tests,setTests] = useState([]);
 
-  // =========================
-  // LOAD STEPS
-  // =========================
-
   const loadSteps = async () => {
     const data = await apiClient(
       `/api/orders/tests/sessions/${sessionId}/steps`,
@@ -31,10 +27,6 @@ export default function MasterTestSessionDetailsPage(){
       setSteps(data);
     }
   };
-
-  // =========================
-  // LOAD TESTS
-  // =========================
 
   const loadTests = async () => {
     if(!orderId) return;
@@ -54,10 +46,6 @@ export default function MasterTestSessionDetailsPage(){
   useEffect(()=>{
     loadSteps();
   },[]);
-
-  // =========================
-  // UI
-  // =========================
 
   return(
     <div>

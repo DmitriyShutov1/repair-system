@@ -30,13 +30,8 @@ public class Part {
     @Column(name = "article_number", nullable = false, length = 100)
     private String articleNumber;
 
-    /**
-     * ВАЖНО:
-     * PostgreSQL ENUM → храним как STRING.
-     * columnDefinition нужен, чтобы Hibernate не пытался создать VARCHAR.
-     */
     @Enumerated(EnumType.STRING)
-    @Column(name = "category", nullable = false, columnDefinition = "part_category_enum")
+    @Column(name = "category", nullable = false/*, columnDefinition = "part_category_enum"*/)
     private PartCategory category;
 
     @Column(name = "is_active", nullable = false)

@@ -1,123 +1,3 @@
-// import React, { useEffect, useState, useContext } from 'react';
-// import { AuthContext } from '../../auth/AuthContext';
-// import { apiClient } from '../../api/apiClient';
-
-// export default function AdminUsersPage() {
-
-//   const auth = useContext(AuthContext);
-
-//   const [users, setUsers] = useState([]);
-//   const [form, setForm] = useState({
-//     phone: '',
-//     email: '',
-//     role: 'CLIENT',
-//     branchId: ''
-//   });
-
-//   const [searchEmail, setSearchEmail] = useState('');
-//   const [searchPhone, setSearchPhone] = useState('');
-
-//   const loadUsers = async () => {
-//     const data = await apiClient('/api/crud/users', 'GET', null, auth);
-//     setUsers(data.content);
-//   };
-
-//   useEffect(() => {
-//     loadUsers();
-//   }, []);
-
-//   const createUser = async () => {
-//     await apiClient('/api/crud/users/createByAdmin', 'POST', form, auth);
-//     loadUsers();
-//   };
-
-//   const deleteUser = async (id) => {
-//     await apiClient(`/api/crud/users/${id}`, 'DELETE', null, auth);
-//     loadUsers();
-//   };
-
-//   const searchByEmail = async () => {
-//     const data = await apiClient(
-//       `/api/crud/users/by-email?email=${searchEmail}`,
-//       'GET',
-//       null,
-//       auth
-//     );
-//     alert(JSON.stringify(data, null, 2));
-//   };
-
-//   const searchByPhone = async () => {
-//     const data = await apiClient(
-//       `/api/crud/users/by-phone?phone=${searchPhone}`,
-//       'GET',
-//       null,
-//       auth
-//     );
-//     alert(JSON.stringify(data, null, 2));
-//   };
-
-//   return (
-//     <div>
-//       <h2>Управление пользователями</h2>
-
-//       <h3>Создать пользователя</h3>
-//       <input placeholder="Телефон"
-//         onChange={e => setForm({...form, phone: e.target.value})}/>
-//       <input placeholder="Email"
-//         onChange={e => setForm({...form, email: e.target.value})}/>
-//       <select onChange={e => setForm({...form, role: e.target.value})}>
-//         <option value="CLIENT">CLIENT</option>
-//         <option value="MASTER">MASTER</option>
-//         <option value="SUPPORT">SUPPORT</option>
-//         <option value="ADMIN">ADMIN</option>
-//       </select>
-//       <button onClick={createUser}>Создать</button>
-
-//       <h3>Поиск</h3>
-//       <input placeholder="Email"
-//         onChange={e => setSearchEmail(e.target.value)} />
-//       <button onClick={searchByEmail}>Найти по Email</button>
-
-//       <input placeholder="Телефон"
-//         onChange={e => setSearchPhone(e.target.value)} />
-//       <button onClick={searchByPhone}>Найти по Телефону</button>
-
-//       <h3>Список пользователей</h3>
-//       <table border="1">
-//         <thead>
-//           <tr>
-//             <th>ID</th>
-//             <th>Email</th>
-//             <th>Phone</th>
-//             <th>Role</th>
-//             <th>Status</th>
-//             <th>Branch</th>
-//             <th>Action</th>
-//           </tr>
-//         </thead>
-//         <tbody>
-//           {users?.map(u => (
-//             <tr key={u.id}>
-//               <td>{u.id}</td>
-//               <td>{u.email}</td>
-//               <td>{u.phone}</td>
-//               <td>{u.role}</td>
-//               <td>{u.status}</td>
-//               <td>{u.branchId}</td>
-//               <td>
-//                 <button onClick={() => deleteUser(u.id)}>
-//                   Delete
-//                 </button>
-//               </td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-
-//     </div>
-//   );
-// }
-
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../../auth/AuthContext';
 import { apiClient } from '../../api/apiClient';
@@ -144,9 +24,6 @@ export default function AdminUsersPage() {
 
   const [editUser, setEditUser] = useState(null);
 
-  // -----------------------
-  // LOAD BY ROLE + STATUS
-  // -----------------------
   const loadUsers = async (pageNumber = 0) => {
 
     const data = await apiClient(
@@ -161,9 +38,7 @@ export default function AdminUsersPage() {
     setPage(pageNumber);
   };
 
-  // -----------------------
-  // CREATE
-  // -----------------------
+
   const createUser = async () => {
 
     const body = {
@@ -181,9 +56,6 @@ export default function AdminUsersPage() {
     alert('User created');
   };
 
-  // -----------------------
-  // UPDATE
-  // -----------------------
   const updateUser = async () => {
 
     const body = {};

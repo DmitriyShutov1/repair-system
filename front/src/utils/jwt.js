@@ -1,9 +1,4 @@
-// src/utils/jwt.js
 
-/**
- * Декодирует payload JWT (без валидации подписи)
- * Используется только на фронте для чтения role, sub и т.д.
- */
 export function decodeJwt(token) {
   if (!token) {
     throw new Error('JWT token is empty');
@@ -17,7 +12,6 @@ export function decodeJwt(token) {
 
   const base64Url = parts[1];
 
-  // base64url → base64
   const base64 = base64Url
     .replace(/-/g, '+')
     .replace(/_/g, '/');

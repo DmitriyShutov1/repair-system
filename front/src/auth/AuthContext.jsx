@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [deviceId, setDeviceId] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // 1️⃣ Создаём deviceId один раз
   useEffect(() => {
     let stored = localStorage.getItem('deviceId');
     if (!stored) {
@@ -20,7 +19,6 @@ export const AuthProvider = ({ children }) => {
     setDeviceId(stored);
   }, []);
 
-  // 2️⃣ Автовосстановление сессии
   useEffect(() => {
     if (!deviceId) return;
 

@@ -1,36 +1,6 @@
-// import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-// import { useContext } from 'react';
-// import { AuthContext } from '../auth/AuthContext';
-// import LoginPage from '../pages/LoginPage';
-// import AdminMenu from '../pages/AdminMenu';
-// import AdminUsersPage from '../pages/admin/AdminUsersPage';
-// import AdminBranchesPage from '../pages/admin/AdminBranchesPage';
-
-// function App() {
-
-//   const auth = useContext(AuthContext);
-
-//   if (!auth.user) {
-//     return <LoginPage />;
-//   }
-
-//   return (
-//     <BrowserRouter>
-//       <Routes>
-//         <Route path="/" element={<AdminMenu />} />
-//         <Route path="/admin/users" element={<AdminUsersPage />} />
-//         <Route path="/admin/branches" element={<AdminBranchesPage />} />
-//         <Route path="*" element={<Navigate to="/" />} />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// }
-
-
 import { useEffect } from 'react';
 import { NotificationContext } from '../NotificationContext';
 import { setGlobalErrorHandler } from '../api/apiClient';
-// export default App;
 import MainLayout from '../layout/MainLayout';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useContext } from 'react';

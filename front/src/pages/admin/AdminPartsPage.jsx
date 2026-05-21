@@ -33,18 +33,10 @@ export default function AdminPartsPage() {
 
   const [updateForm,setUpdateForm] = useState(null);
 
-  // =========================
-  // RESULT HELPER
-  // =========================
-
   const applyPage = (data) => {
     setResults(data.content);
     setTotalPages(data.totalPages);
   };
-
-  // =========================
-  // CREATE
-  // =========================
 
   const createPart = async () => {
 
@@ -57,10 +49,6 @@ export default function AdminPartsPage() {
 
     alert("Создано id="+data.id);
   };
-
-  // =========================
-  // UPDATE
-  // =========================
 
   const updatePart = async () => {
 
@@ -94,10 +82,6 @@ const clearWaitingList = async (partId) => {
   alert("Лист ожидания очищен");
 };
 
-  // =========================
-  // DELETE
-  // =========================
-
   const deletePart = async (id)=>{
 
     if(!window.confirm("Удалить?")) return;
@@ -106,10 +90,6 @@ const clearWaitingList = async (partId) => {
 
     setResults(results.filter(p=>p.id!==id));
   };
-
-  // =========================
-  // SEARCH FUNCTIONS
-  // =========================
 
   const searchByName = async (p=0)=>{
 
@@ -159,10 +139,6 @@ const findByCategory = async (p=0)=>{
     setTotalPages(0);
   };
 
-  // =========================
-  // PAGINATION
-  // =========================
-
   const nextPage = ()=>{
 
     if(page+1 >= totalPages) return;
@@ -178,10 +154,6 @@ const findByCategory = async (p=0)=>{
     if(mode==="name") searchByName(page-1);
     if(mode==="category") findByCategory(page-1);
   };
-
-  // =========================
-  // UI
-  // =========================
 
   return (
   <div>
@@ -260,8 +232,7 @@ const findByCategory = async (p=0)=>{
   <p>Category: {part.category}</p>
   <p>Active: {part.active ? 'Yes':'No'}</p>
 
-  {/* <button onClick={()=>setUpdateForm(part)}>Edit</button>
-  <button onClick={()=>deletePart(part.id)}>Delete</button> */}
+  
   <button onClick={()=>setUpdateForm(part)}>
     Edit
   </button>

@@ -1,91 +1,3 @@
-// import React,{useContext,useEffect,useState} from "react"
-// import {AuthContext} from "../../auth/AuthContext"
-// import {apiClient} from "../../api/apiClient"
-// import {useNavigate} from "react-router-dom"
-
-// const statuses = [
-// "OPEN",
-// "WAITING_RETURN",
-// "RETURN_CONFIRMED",
-// "COMPLETED"
-// ]
-
-// export default function SupportRequestsPage(){
-
-// const auth = useContext(AuthContext)
-// const navigate = useNavigate()
-
-// const [requests,setRequests] = useState([])
-// const [status,setStatus] = useState("OPEN")
-// const [page,setPage] = useState(0)
-
-// const loadRequests = async(p=0)=>{
-
-// const data = await apiClient(
-// `/api/support-requests?supportId=${auth.userId}&status=${status}&page=${p}&size=10`,
-// "GET",
-// null,
-// auth
-// )
-
-// setRequests(data.content)
-// setPage(p)
-
-// }
-
-// useEffect(()=>{
-// loadRequests(0)
-// },[status])
-
-// return(
-
-// <div>
-
-// <h2>Мои обращения</h2>
-
-// <select
-// value={status}
-// onChange={e=>setStatus(e.target.value)}
-// >
-
-// {statuses.map(s=>
-// <option key={s}>{s}</option>
-// )}
-
-// </select>
-
-// <hr/>
-
-// {requests.map(r=>
-
-// <div key={r.id} style={{border:"1px solid gray",padding:10,margin:10}}>
-
-// <b>Обращение #{r.id}</b>
-
-// <p>Заказ: {r.orderId}</p>
-
-// <p>Описание: {r.description}</p>
-
-// <p>Создано: {r.createdAt}</p>
-
-// <button
-// onClick={()=>navigate(`/support/requests/${r.id}`)}
-// >
-// Подробнее
-// </button>
-
-// </div>
-
-// )}
-
-// <button onClick={()=>loadRequests(page-1)}>prev</button>
-// <button onClick={()=>loadRequests(page+1)}>next</button>
-
-// </div>
-
-// )
-
-// }
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../auth/AuthContext";
 import { apiClient } from "../../api/apiClient";
@@ -107,7 +19,7 @@ export default function SupportRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [status, setStatus] = useState("CREATED");
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0); // ← добавил для пагинации
+  const [totalPages, setTotalPages] = useState(0); 
 
   const loadRequests = async (p = 0) => {
     const data = await apiClient(
@@ -119,7 +31,7 @@ export default function SupportRequestsPage() {
 
     setRequests(data.content);
     setPage(p);
-    setTotalPages(data.totalPages); // ← сохраняем общее количество страниц
+    setTotalPages(data.totalPages); 
   };
 
   useEffect(() => {

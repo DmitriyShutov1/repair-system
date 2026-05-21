@@ -5,6 +5,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -21,18 +23,34 @@ public class JwtService {
     private final PrivateKey privateKey;
     private final PublicKey publicKey;
     private final long accessTokenExpirationMs;
-
+    
     public JwtService(JwtProperties properties) {
-        if (properties.getPrivateKey() == null || properties.getPublicKey() == null) {
-            throw new IllegalArgumentException("RSA keys must be configured in security.jwt.private-key/public-key");
+        if (properties.getPrivateKeyPath() == null || properties.getPublicKeyPath() == null) {
+            throw new IllegalArgumentException("RSA keys must be configured");
         }
-
-        this.privateKey = loadPrivateKey(properties.getPrivateKey());
-        this.publicKey = loadPublicKey(properties.getPublicKey());
+        try {
+            String privateKeyStr = Files.readString(Path.of(properties.getPrivateKeyPath()));
+            String publicKeyStr = Files.readString(Path.of(properties.getPublicKeyPath()));
+            this.privateKey = loadPrivateKey(privateKeyStr);
+            this.publicKey = loadPublicKey(publicKeyStr);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to read RSA keys", e);
+        }
         this.accessTokenExpirationMs = properties.getAccessTokenExpirationMs();
-
         log.info("JwtService initialized with RS256. Access token ttl (ms) = {}", accessTokenExpirationMs);
     }
+
+//    public JwtService(JwtProperties properties) {
+//        if (properties.getPrivateKey() == null || properties.getPublicKey() == null) {
+//            throw new IllegalArgumentException("RSA keys must be configured in security.jwt.private-key/public-key");
+//        }
+//
+//        this.privateKey = loadPrivateKey(properties.getPrivateKey());
+//        this.publicKey = loadPublicKey(properties.getPublicKey());
+//        this.accessTokenExpirationMs = properties.getAccessTokenExpirationMs();
+//
+//        log.info("JwtService initialized with RS256. Access token ttl (ms) = {}", accessTokenExpirationMs);
+//    }
 
 
     public String generateAccessToken(Long userId, String role, Long branchId) {

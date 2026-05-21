@@ -1,299 +1,3 @@
-// import React, { useContext, useState } from 'react';
-// import { AuthContext } from '../../auth/AuthContext';
-// import { apiClient } from '../../api/apiClient';
-
-// export default function AdminPricingPolicyPage() {
-
-//   const auth = useContext(AuthContext);
-
-//   const [partId, setPartId] = useState('');
-//   const [serviceId, setServiceId] = useState('');
-
-//   const [costPrice, setCostPrice] = useState('');
-//   const [clientPrice, setClientPrice] = useState('');
-//   const [masterPercentage, setMasterPercentage] = useState('');
-
-//   const [results, setResults] = useState([]);
-
-//   const [page, setPage] = useState(0);
-//   const [totalPages, setTotalPages] = useState(0);
-
-//   const size = 10;
-
-//   // =========================
-//   // UPSERT
-//   // =========================
-
-//   const createPolicy = async () => {
-
-//     const data = await apiClient(
-//       '/api/pricing-policies',
-//       'POST',
-//       {
-//         partId: partId || null,
-//         serviceId: serviceId || null,
-//         costPrice,
-//         clientPrice,
-//         masterPercentage
-//       },
-//       auth
-//     );
-
-//     alert('Создана новая версия цены id=' + data.id);
-//   };
-
-//   // =========================
-//   // CLOSE
-//   // =========================
-
-//   const closePartPolicy = async () => {
-
-//     if (!window.confirm('Закрыть текущую цену для запчасти?')) return;
-
-//     await apiClient(
-//       `/api/pricing-policies/part/${partId}`,
-//       'DELETE',
-//       null,
-//       auth
-//     );
-
-//     alert('Цена закрыта');
-//   };
-
-//   const closeServicePolicy = async () => {
-
-//     if (!window.confirm('Закрыть текущую цену для услуги?')) return;
-
-//     await apiClient(
-//       `/api/pricing-policies/service/${serviceId}`,
-//       'DELETE',
-//       null,
-//       auth
-//     );
-
-//     alert('Цена закрыта');
-//   };
-
-//   // =========================
-//   // HISTORY
-//   // =========================
-
-//   const loadPartHistory = async (p = 0) => {
-
-//     const data = await apiClient(
-//       `/api/pricing-policies/part/${partId}?page=${p}&size=${size}`,
-//       'GET',
-//       null,
-//       auth
-//     );
-
-//     setResults(data.content);
-//     setPage(data.number);
-//     setTotalPages(data.totalPages);
-//   };
-
-//   const loadServiceHistory = async (p = 0) => {
-
-//     const data = await apiClient(
-//       `/api/pricing-policies/service/${serviceId}?page=${p}&size=${size}`,
-//       'GET',
-//       null,
-//       auth
-//     );
-
-//     setResults(data.content);
-//     setPage(data.number);
-//     setTotalPages(data.totalPages);
-//   };
-
-//   // =========================
-//   // ACTIVE
-//   // =========================
-
-//   const loadActivePart = async () => {
-
-//     const data = await apiClient(
-//       `/api/pricing-policies/part/${partId}/active`,
-//       'GET',
-//       null,
-//       auth
-//     );
-
-//     setResults([data]);
-//   };
-
-//   const loadActiveService = async () => {
-
-//     const data = await apiClient(
-//       `/api/pricing-policies/service/${serviceId}/active`,
-//       'GET',
-//       null,
-//       auth
-//     );
-
-//     setResults([data]);
-//   };
-
-//   // =========================
-//   // UI
-//   // =========================
-
-//   return (
-
-//     <div>
-
-//       <h2>Ценовая политика</h2>
-
-//       <hr />
-
-//       <h3>Создать / обновить цену</h3>
-
-//       <div>
-
-//         <input
-//           placeholder="Part ID"
-//           onChange={e => setPartId(e.target.value)}
-//         />
-
-//         <input
-//           placeholder="Service ID"
-//           onChange={e => setServiceId(e.target.value)}
-//         />
-
-//       </div>
-
-//       <div>
-
-//         <input
-//           placeholder="Cost price"
-//           onChange={e => setCostPrice(e.target.value)}
-//         />
-
-//         <input
-//           placeholder="Client price"
-//           onChange={e => setClientPrice(e.target.value)}
-//         />
-
-//         <input
-//           placeholder="Master %"
-//           onChange={e => setMasterPercentage(e.target.value)}
-//         />
-
-//       </div>
-
-//       <button onClick={createPolicy}>
-//         Создать новую цену
-//       </button>
-
-//       <hr />
-
-//       <h3>Активная цена</h3>
-
-//       <button onClick={loadActivePart}>
-//         Активная цена для запчасти
-//       </button>
-
-//       <button onClick={loadActiveService}>
-//         Активная цена для услуги
-//       </button>
-
-//       <hr />
-
-//       <h3>История цен</h3>
-
-//       <button onClick={() => loadPartHistory(0)}>
-//         История по запчасти
-//       </button>
-
-//       <button onClick={() => loadServiceHistory(0)}>
-//         История по услуге
-//       </button>
-
-//       <hr />
-
-//       <h3>Закрыть текущую цену</h3>
-
-//       <button onClick={closePartPolicy}>
-//         Закрыть цену для запчасти
-//       </button>
-
-//       <button onClick={closeServicePolicy}>
-//         Закрыть цену для услуги
-//       </button>
-
-//       <hr />
-
-//       <h3>Результаты</h3>
-
-//       {results.map(policy => (
-
-//         <div key={policy.id} style={{ border: '1px solid gray', margin: 10, padding: 10 }}>
-
-//           <p>ID: {policy.id}</p>
-
-//           <p>Part ID: {policy.partId}</p>
-//           <p>Service ID: {policy.serviceId}</p>
-
-//           <p>Cost price: {policy.costPrice}</p>
-//           <p>Client price: {policy.clientPrice}</p>
-//           <p>Master %: {policy.masterPercentage}</p>
-
-//           <p>Effective from: {policy.effectiveFrom}</p>
-//           <p>Effective to: {policy.effectiveTo || 'ACTIVE'}</p>
-
-//           <p>Version: {policy.version}</p>
-
-//         </div>
-
-//       ))}
-
-//       {totalPages > 1 && (
-
-//         <div>
-
-//           <button
-//             disabled={page === 0}
-//             onClick={() => {
-
-//               const newPage = page - 1;
-//               setPage(newPage);
-
-//               if (partId) loadPartHistory(newPage);
-//               if (serviceId) loadServiceHistory(newPage);
-
-//             }}
-//           >
-//             Назад
-//           </button>
-
-//           <span>
-//             Страница {page + 1} из {totalPages}
-//           </span>
-
-//           <button
-//             disabled={page + 1 >= totalPages}
-//             onClick={() => {
-
-//               const newPage = page + 1;
-//               setPage(newPage);
-
-//               if (partId) loadPartHistory(newPage);
-//               if (serviceId) loadServiceHistory(newPage);
-
-//             }}
-//           >
-//             Вперёд
-//           </button>
-
-//         </div>
-
-//       )}
-
-//     </div>
-//   );
-// }
-
-
 import React, { useContext, useState } from 'react';
 import { AuthContext } from '../../auth/AuthContext';
 import { apiClient } from '../../api/apiClient';
@@ -325,10 +29,6 @@ export default function AdminPricingPolicyPage() {
 
   const size = 10;
 
-  // =====================================================
-  // UPSERT
-  // =====================================================
-
   const createPolicy = async () => {
 
     const data = await apiClient(
@@ -346,10 +46,6 @@ export default function AdminPricingPolicyPage() {
 
     alert('Создана новая версия цены id=' + data.id);
   };
-
-  // =====================================================
-  // CLOSE POLICY
-  // =====================================================
 
   const closePartPolicy = async () => {
 
@@ -379,10 +75,6 @@ export default function AdminPricingPolicyPage() {
     alert('Цена закрыта');
   };
 
-  // =====================================================
-  // HISTORY
-  // =====================================================
-
   const loadPartHistory = async (p = 0) => {
 
     const data = await apiClient(
@@ -411,10 +103,6 @@ export default function AdminPricingPolicyPage() {
     setTotalPages(data.totalPages);
   };
 
-  // =====================================================
-  // ACTIVE PRICE
-  // =====================================================
-
   const loadActivePart = async () => {
 
     const data = await apiClient(
@@ -439,10 +127,6 @@ export default function AdminPricingPolicyPage() {
     setResults([data]);
   };
 
-  // =====================================================
-  // PRICELESS PARTS
-  // =====================================================
-
   const loadPricelessParts = async (p = 0) => {
 
     const data = await apiClient(
@@ -457,10 +141,6 @@ export default function AdminPricingPolicyPage() {
     setPartsTotalPages(data.totalPages);
   };
 
-  // =====================================================
-  // PRICELESS SERVICES
-  // =====================================================
-
   const loadPricelessServices = async (p = 0) => {
 
     const data = await apiClient(
@@ -474,10 +154,6 @@ export default function AdminPricingPolicyPage() {
     setServicesPage(data.number);
     setServicesTotalPages(data.totalPages);
   };
-
-  // =====================================================
-  // UI
-  // =====================================================
 
   return (
 

@@ -38,7 +38,7 @@ const fetchPickupCode = async () => {
     auth
   );
 
-  setPickupCode(code.pickupCode); // <-- сохраняем строку
+  setPickupCode(code.pickupCode);  
 };
 
 
@@ -119,7 +119,6 @@ return(
 )}
 
 
-{/* Кнопка получения кода */}
       <button onClick={fetchPickupCode}>
         {pickupCode ? "ПОКАЗАТЬ КОД ВЫДАЧИ" : "ПОЛУЧИТЬ КОД ВЫДАЧИ"}
       </button>

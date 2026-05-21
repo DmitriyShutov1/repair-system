@@ -47,9 +47,9 @@ return(
 
 <p>Описание: {request.description}</p>
 
-<p>Серийный номер: {request.deviceSerial || 'Не указан'}</p>      {/* ← новое */}
+<p>Серийный номер: {request.deviceSerial || 'Не указан'}</p>      
 
-<p>Модель устройства: {request.deviceModel || 'Не указана'}</p>   {/* ← новое */}
+<p>Модель устройства: {request.deviceModel || 'Не указана'}</p>   
 
 <p>Создано: {request.createdAt}</p>
 

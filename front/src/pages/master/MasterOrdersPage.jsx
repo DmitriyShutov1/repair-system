@@ -28,10 +28,6 @@ export default function MasterOrdersPage(){
 
   const size = 10;
 
-  // =========================
-  // LOAD ORDERS
-  // =========================
-
   const loadOrders = async (p=0)=>{
 
     const data = await apiClient(
@@ -47,10 +43,6 @@ export default function MasterOrdersPage(){
 
   };
 
-  // =========================
-  // PAGINATION
-  // =========================
-
   const nextPage = ()=>{
     if(page+1>=totalPages) return;
     loadOrders(page+1);
@@ -60,10 +52,6 @@ export default function MasterOrdersPage(){
     if(page===0) return;
     loadOrders(page-1);
   };
-
-  // =========================
-  // UI
-  // =========================
 
   return(
 

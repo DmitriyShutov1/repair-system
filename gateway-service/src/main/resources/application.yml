@@ -86,16 +86,17 @@ spring:
 
 security:
   jwt:
-    public-key: |
-      -----BEGIN PUBLIC KEY-----
-      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wW4Csl9ytzuyw8oQbfR
-      Fjs8rxv9a72sufeLPXfHaqNh1q2VCZjCiCtjozVpBDQreW0SfOI/nfVnnYDHNy0Q
-      2jAizLQPUPmKtzq8dy9cUPCfIZS22SW7P9r02jf0InbGoNRXhNAU2n2q+OuhVawc
-      jQGcSTaDXVLqaayKxMPHTo75BZlhr+4ZlYFcwBUbhoQ+px+iWQRK/4z6QSu23zo6
-      pES+pfFuqIzuUR/5s6DTr9mn0bNEl67pjYWRMrDj0zVwF1TlmggWmP2xIlxECXTA
-      HqFj2Z5VHIhK/FJZyLXfkI6ChXeRkB1U7cMlLUV4aH5Sa/+Q2ppjlZx198NhF5SH
-      kQIDAQAB
-      -----END PUBLIC KEY-----
+#    public-key: |
+#      -----BEGIN PUBLIC KEY-----
+#      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2wW4Csl9ytzuyw8oQbfR
+#      Fjs8rxv9a72sufeLPXfHaqNh1q2VCZjCiCtjozVpBDQreW0SfOI/nfVnnYDHNy0Q
+#      2jAizLQPUPmKtzq8dy9cUPCfIZS22SW7P9r02jf0InbGoNRXhNAU2n2q+OuhVawc
+#      jQGcSTaDXVLqaayKxMPHTo75BZlhr+4ZlYFcwBUbhoQ+px+iWQRK/4z6QSu23zo6
+#      pES+pfFuqIzuUR/5s6DTr9mn0bNEl67pjYWRMrDj0zVwF1TlmggWmP2xIlxECXTA
+#      HqFj2Z5VHIhK/FJZyLXfkI6ChXeRkB1U7cMlLUV4aH5Sa/+Q2ppjlZx198NhF5SH
+#      kQIDAQAB
+#      -----END PUBLIC KEY-----
+    public-key-path: /run/secrets/jwt_public_key
 
 management:
   endpoints:
