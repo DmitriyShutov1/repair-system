@@ -118,6 +118,9 @@ public class OrderController {
             @RequestHeader("X-Branch-Id") Long branchId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return mapToResponse(orderService.createOrder(request, userId, branchId, role));
     }
 
@@ -129,6 +132,9 @@ public class OrderController {
             @RequestHeader("X-Branch-Id") Long branchId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         orderItemService.setOrderItems(request);
         return Map.of("status", "ok");
     }
@@ -141,13 +147,18 @@ public class OrderController {
            // @RequestHeader("X-Branch-Id") Long branchId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"CLIENT".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return mapToResponse(orderService.confirmOrder(orderId, userId));
     }
 
 
     @PostMapping("/{orderId}/complete")
     public OrderResponse completeOrder(@PathVariable Long orderId, @RequestHeader("X-User-Id") Long userId, @RequestHeader("X-User-Role") String role) {
-
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return mapToResponse(orderService.completeOrder(orderId));
     }
 
@@ -159,7 +170,9 @@ public class OrderController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String role
     ) {
-
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return mapToResponse(orderService.issueOrder(orderId, pickupCode));
     }
 
@@ -173,7 +186,9 @@ public class OrderController {
             @RequestParam boolean cancelledByClient,
             @RequestBody List<Long> itemsToRemove
     ) {
-
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return mapToResponse(orderService.cancelOrder(
                 orderId,
                 branchId,
@@ -223,6 +238,9 @@ public class OrderController {
             @RequestParam Order.Status status,
             Pageable pageable
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
     	Page<Order> ordersPage = orderService.getOrdersByMasterAndStatus(userId, status, pageable);
         return ordersPage.map(this::mapToResponse);
     }
@@ -233,6 +251,9 @@ public class OrderController {
             @RequestHeader("X-User-Role") String role,
             Pageable pageable
     ) {
+    	if (!"CLIENT".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
     	Page<Order> ordersPage = orderService.getOrdersByClientNotIssued(userId, pageable);
         return ordersPage.map(this::mapToResponse);
         
@@ -244,6 +265,9 @@ public class OrderController {
             @RequestHeader("X-User-Role") String role,
             Pageable pageable
     ) {
+    	if (!"CLIENT".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
     	Page<Order> ordersPage = orderService.getOrdersByClientIssued(userId, pageable);
         return ordersPage.map(this::mapToResponse);
     }
@@ -289,6 +313,9 @@ public class OrderController {
             @RequestHeader("X-User-Role") String role, 
             @RequestParam Long orderId
     ) {
+    	if (!"CLIENT".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
     	return Map.of("pickupCode", orderService.getPickupCode(orderId));
     }
     
@@ -310,6 +337,9 @@ public class OrderController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return orderService.getAllTests();
     }
     
@@ -321,6 +351,9 @@ public class OrderController {
             @RequestHeader("X-User-Role") String role,
             @RequestBody List<TestResultDto> results
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         orderService.saveTestResults(orderId, userId, results);
         return Map.of("status", "ok");
     }
@@ -332,6 +365,9 @@ public class OrderController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return orderService.getSessionsByOrder(orderId);
     }
 
@@ -342,6 +378,9 @@ public class OrderController {
             @RequestHeader("X-User-Id") Long userId,
             @RequestHeader("X-User-Role") String role
     ) {
+    	if (!"MASTER".equals(role)) {
+            throw new IllegalStateException("Access denied");
+        }
         return orderService.getStepsBySession(sessionId);
     }
     

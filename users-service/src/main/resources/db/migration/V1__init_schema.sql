@@ -1,4 +1,6 @@
-
+-- =========================================
+-- BRANCHES
+-- =========================================
 CREATE TABLE branches (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
@@ -10,6 +12,10 @@ CREATE TABLE branches (
 
 CREATE INDEX idx_branch_name ON branches(name);
 
+
+-- =========================================
+-- USER ACCOUNTS
+-- =========================================
 CREATE TABLE user_accounts (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE,
@@ -34,6 +40,10 @@ ALTER TABLE user_accounts
     REFERENCES branches(id)
     ON DELETE SET NULL;
 
+
+-- =========================================
+-- REFRESH TOKENS
+-- =========================================
 CREATE TABLE refresh_tokens (
     id BIGSERIAL PRIMARY KEY,
     version BIGINT,
@@ -60,6 +70,9 @@ ALTER TABLE refresh_tokens
     ON DELETE CASCADE;
 
     
+-- =========================================
+-- INITIAL ADMIN USER
+-- =========================================
 -- Пароль: adminadmin (bcrypt hash)
 INSERT INTO branches (name, address, phone)
 VALUES ('Main Branch', 'г. Москва, ул. Ленина, д. 1', '+7 (495) 123-45-67')

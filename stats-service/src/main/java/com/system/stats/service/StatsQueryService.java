@@ -108,22 +108,27 @@ public class StatsQueryService {
 
     @Transactional
     public void addBonus(Long masterId, Long branchId, BigDecimal amount) {
-        saveFact(masterId, branchId, amount, OperationType.BONUS);
+    	
+    	Long branch = factRepo.findFirstByMasterIdOrderByEventDateDesc(masterId)
+                .map(FinancialFact::getBranchId)
+                .orElseThrow(() -> new IllegalStateException("No facts found for master"));
+    	
+        saveFact(masterId, branch, amount, OperationType.BONUS);
         LocalDate today = LocalDate.now();
         MasterDailyStats master = masterRepo
                 .findByMasterIdAndStatDate(masterId, today)
                 .orElse(MasterDailyStats.builder()
                         .masterId(masterId)
-                        .branchId(branchId)
+                        .branchId(branch)
                         .statDate(today)
                         .build());
         master.setTotalIncome(master.getTotalIncome().add(amount));
         masterRepo.save(master);
         
         CompanyDailyStats company = companyRepo
-                .findByStatDateAndBranchId(today, branchId)
+                .findByStatDateAndBranchId(today, branch)
                 .orElse(CompanyDailyStats.builder()
-                        .branchId(branchId)
+                        .branchId(branch)
                         .statDate(today)
                         .build());
         company.setTotalExpenses(company.getTotalExpenses().add(amount));
@@ -132,22 +137,26 @@ public class StatsQueryService {
 
     @Transactional
     public void addPenalty(Long masterId, Long branchId, BigDecimal amount) {
-        saveFact(masterId, branchId, amount, OperationType.PENALTY);
+    	Long branch = factRepo.findFirstByMasterIdOrderByEventDateDesc(masterId)
+                .map(FinancialFact::getBranchId)
+                .orElseThrow(() -> new IllegalStateException("No facts found for master"));
+    	
+        saveFact(masterId, branch, amount, OperationType.PENALTY);
         LocalDate today = LocalDate.now();
         MasterDailyStats master = masterRepo
                 .findByMasterIdAndStatDate(masterId, today)
                 .orElse(MasterDailyStats.builder()
                         .masterId(masterId)
-                        .branchId(branchId)
+                        .branchId(branch)
                         .statDate(today)
                         .build());
         master.setTotalIncome(master.getTotalIncome().subtract(amount));
         masterRepo.save(master);
         
         CompanyDailyStats company = companyRepo
-                .findByStatDateAndBranchId(today, branchId)
+                .findByStatDateAndBranchId(today, branch)
                 .orElse(CompanyDailyStats.builder()
-                        .branchId(branchId)
+                        .branchId(branch)
                         .statDate(today)
                         .build());
         company.setTotalIncome(company.getTotalIncome().add(amount));

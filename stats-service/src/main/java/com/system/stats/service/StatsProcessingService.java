@@ -56,7 +56,8 @@ public class StatsProcessingService {
 
             case ORDER_COMPLETED -> {
                 BigDecimal income = nvl(dto.getClientAmount());
-                BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+                //BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+                BigDecimal expenses = nvl(dto.getMasterAmount());
 
                 factAmount = income.subtract(expenses);
 
@@ -69,7 +70,8 @@ public class StatsProcessingService {
             }
 
             case WARRANTY_COMPLETED -> {
-                BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+                //BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+            	BigDecimal expenses = nvl(dto.getMasterAmount());
 
                 factAmount = expenses.negate(); // убыток
 
@@ -92,7 +94,8 @@ public class StatsProcessingService {
 
             case ORDER_CANCELLED_CLIENT -> {
                 BigDecimal income = nvl(dto.getClientAmount());
-                BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+                //BigDecimal expenses = nvl(dto.getCostPrice()).add(nvl(dto.getMasterAmount()));
+                BigDecimal expenses = nvl(dto.getMasterAmount());
 
                 factAmount = income.subtract(expenses);
 
@@ -113,10 +116,11 @@ public class StatsProcessingService {
                     master.setCancelledOrdersCount(master.getCancelledOrdersCount() + 1);
                 }
 
-                factAmount = cost.negate();
+                //factAmount = cost.negate();
+                factAmount = BigDecimal.ZERO;
                 
                 company.setTotalOrders(company.getTotalOrders() + 1);
-                company.setTotalExpenses(company.getTotalExpenses().add(cost));
+                //company.setTotalExpenses(company.getTotalExpenses().add(cost));
             }
             case PURCHASE -> {
 

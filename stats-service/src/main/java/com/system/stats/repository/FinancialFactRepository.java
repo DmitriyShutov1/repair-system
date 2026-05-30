@@ -73,4 +73,7 @@ public interface FinancialFactRepository extends JpaRepository<FinancialFact, Lo
                                                                         org.springframework.data.domain.Pageable pageable);
     
     boolean existsByMasterIdAndEventDate(Long masterId, LocalDate eventDate);
+    
+    //добавил
+    Optional<FinancialFact> findFirstByMasterIdOrderByEventDateDesc(Long masterId);
 }
